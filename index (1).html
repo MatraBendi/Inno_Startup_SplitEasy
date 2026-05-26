@@ -1,0 +1,4410 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#0D9488" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<title>SplitEasy — Pincér app</title>
+<meta name="description" content="Éttermi számla-szétosztó SaaS. Mobil-first pincér felület: rendelés, drag & drop számla-szétosztás, QR-kódos fizetés, PDF nyugta." />
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- Third-party libraries for QR + PDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+/* =====================================================
+   DESIGN TOKENS — Light theme, teal accent
+   ===================================================== */
+:root {
+  /* Background layers */
+  --bg:       #F8FAFC;
+  --bg-alt:   #F1F5F9;
+  --surface:  #FFFFFF;
+  --surface-2:#FAFAFA;
+
+  /* Text */
+  --ink-900:  #0F172A;
+  --ink-700:  #334155;
+  --ink-500:  #64748B;
+  --ink-400:  #94A3B8;
+  --ink-300:  #CBD5E1;
+
+  /* Borders */
+  --border:   #E2E8F0;
+  --border-strong: #CBD5E1;
+
+  /* Brand — Teal */
+  --teal-700: #0F766E;
+  --teal-600: #0D9488;
+  --teal-500: #14B8A6;
+  --teal-400: #2DD4BF;
+  --teal-300: #5EEAD4;
+  --teal-100: #CCFBF1;
+  --teal-50:  #F0FDFA;
+
+  /* Status */
+  --green-700:#15803D;
+  --green-600:#16A34A;
+  --green-500:#22C55E;
+  --green-100:#DCFCE7;
+  --green-50: #F0FDF4;
+
+  --amber-700:#B45309;
+  --amber-600:#D97706;
+  --amber-500:#F59E0B;
+  --amber-100:#FEF3C7;
+  --amber-50: #FFFBEB;
+
+  --rose-700: #BE123C;
+  --rose-600: #DC2626;
+  --rose-500: #EF4444;
+  --rose-100: #FEE2E2;
+  --rose-50:  #FEF2F2;
+
+  --plum-600: #9333EA;
+  --plum-500: #A855F7;
+  --plum-100: #F3E8FF;
+
+  /* Radii */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius:    14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Shadows — soft, no harsh edges */
+  --shadow-sm: 0 1px 2px rgba(15,23,42,0.05), 0 1px 1px rgba(15,23,42,0.04);
+  --shadow:    0 4px 12px -2px rgba(15,23,42,0.08), 0 2px 4px -1px rgba(15,23,42,0.04);
+  --shadow-md: 0 10px 25px -5px rgba(15,23,42,0.1), 0 4px 10px -3px rgba(15,23,42,0.05);
+  --shadow-lg: 0 20px 40px -10px rgba(15,23,42,0.15), 0 8px 16px -6px rgba(15,23,42,0.06);
+
+  /* Fonts */
+  --font-sans:    "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Fraunces", Georgia, serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  /* Spacing */
+  --safe-top:    env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --topbar-h:    56px;
+  --bottombar-h: 76px;
+}
+
+/* =====================================================
+   RESET
+   ===================================================== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+*:before, *:after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  font-family: var(--font-sans);
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink-900);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+}
+img, svg { display: block; max-width: 100%; }
+button, input, select, textarea {
+  font: inherit; color: inherit;
+  background: none; border: 0;
+  cursor: pointer;
+}
+button:disabled { cursor: not-allowed; }
+
+/* =====================================================
+   APP SHELL
+   ===================================================== */
+.app {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-top: var(--safe-top);
+}
+
+/* TOPBAR */
+.topbar {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  height: var(--topbar-h);
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 18px;
+  letter-spacing: -0.02em;
+  color: var(--ink-900);
+  flex-shrink: 0;
+}
+.brand-mark {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--teal-500), var(--teal-700));
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(13,148,136,0.3), inset 0 1px 0 rgba(255,255,255,0.3);
+}
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  inset: 7px;
+  background: var(--surface);
+  border-radius: 3px;
+  clip-path: polygon(0 0, 55% 0, 55% 100%, 45% 100%, 45% 0, 100% 0, 100% 100%, 0 100%);
+}
+.brand em { font-style: italic; color: var(--teal-600); }
+
+.topbar-spacer { flex: 1; }
+
+.waiter-chip {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px 6px 6px;
+  background: var(--teal-50);
+  border: 1px solid var(--teal-100);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--teal-700);
+}
+.waiter-chip .avatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal-500), var(--teal-700));
+  display: grid;
+  place-items: center;
+  color: white;
+  font-weight: 700;
+  font-size: 11px;
+}
+@media (max-width: 400px) {
+  .waiter-chip span { display: none; }
+}
+
+.topbar-btn {
+  width: 36px; height: 36px;
+  border-radius: 10px;
+  display: grid; place-items: center;
+  background: var(--bg-alt);
+  color: var(--ink-700);
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+.topbar-btn:hover { background: var(--border); }
+.topbar-btn:active { transform: scale(0.95); }
+.topbar-btn svg { width: 18px; height: 18px; }
+
+/* CONTENT */
+.screen-wrap {
+  flex: 1;
+  padding: 16px 16px calc(var(--bottombar-h) + 24px + var(--safe-bottom));
+  max-width: 720px;
+  width: 100%;
+  margin: 0 auto;
+}
+@media (min-width: 768px) {
+  .screen-wrap { max-width: 1100px; padding: 24px 24px calc(var(--bottombar-h) + 32px); }
+}
+
+.screen {
+  animation: screenIn 0.3s cubic-bezier(.2,.7,.2,1);
+}
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.screen-head {
+  margin-bottom: 18px;
+}
+.screen-head h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 26px;
+  letter-spacing: -0.025em;
+  line-height: 1.1;
+  color: var(--ink-900);
+}
+.screen-head h1 em {
+  font-style: italic;
+  color: var(--teal-600);
+  font-weight: 500;
+}
+.screen-head p {
+  color: var(--ink-500);
+  font-size: 14px;
+  margin-top: 4px;
+}
+@media (min-width: 640px) {
+  .screen-head h1 { font-size: 32px; }
+  .screen-head p { font-size: 15px; }
+}
+
+.back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-500);
+  padding: 6px 10px 6px 6px;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  margin-left: -6px;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+.back-link:hover { background: var(--bg-alt); color: var(--ink-900); }
+.back-link svg { width: 16px; height: 16px; }
+
+/* BOTTOM BAR */
+.bottom-bar {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  z-index: 30;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  border-top: 1px solid var(--border);
+  padding: 12px 16px calc(12px + var(--safe-bottom));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: var(--bottombar-h);
+}
+.bottom-bar.hidden { display: none; }
+.bottom-info {
+  flex: 1;
+  min-width: 0;
+  font-size: 13px;
+  color: var(--ink-500);
+}
+.bottom-info strong { color: var(--ink-900); font-weight: 600; }
+.bottom-info .price {
+  font-family: var(--font-mono);
+  color: var(--teal-700);
+  font-weight: 600;
+  font-size: 15px;
+}
+
+/* BUTTONS */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+  padding: 14px 22px;
+  border-radius: 12px;
+  transition: all 0.15s;
+  white-space: nowrap;
+  min-height: 48px;
+}
+.btn-primary {
+  background: var(--teal-600);
+  color: white;
+  box-shadow: 0 4px 12px -2px rgba(13,148,136,0.4);
+}
+.btn-primary:hover:not(:disabled) { background: var(--teal-700); }
+.btn-primary:active:not(:disabled) { transform: translateY(1px); box-shadow: 0 2px 6px -2px rgba(13,148,136,0.4); }
+.btn-primary:disabled {
+  background: var(--ink-300);
+  color: white;
+  box-shadow: none;
+  opacity: 0.7;
+}
+.btn-ghost {
+  background: var(--surface);
+  color: var(--ink-900);
+  border: 1px solid var(--border-strong);
+}
+.btn-ghost:hover { background: var(--bg-alt); }
+.btn-danger {
+  background: var(--rose-50);
+  color: var(--rose-700);
+  border: 1px solid var(--rose-100);
+}
+.btn-danger:hover { background: var(--rose-100); }
+.btn-sm { padding: 9px 14px; font-size: 13px; min-height: 36px; }
+.btn-block { width: 100%; }
+.btn svg { width: 18px; height: 18px; }
+
+/* ====================================================
+   SCREEN: TABLES
+   ==================================================== */
+.tables-legend {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--ink-500);
+}
+.tables-legend .dot {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.tables-legend .dot::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+.tables-legend .free::before    { background: var(--green-500); }
+.tables-legend .occupied::before{ background: var(--amber-500); }
+
+.tables-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+}
+@media (min-width: 480px) { .tables-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 768px) { .tables-grid { grid-template-columns: repeat(4, 1fr); gap: 16px; } }
+
+.table-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 14px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 130px;
+  text-align: left;
+  position: relative;
+  overflow: hidden;
+  transition: all 0.18s;
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+}
+.table-card:hover {
+  border-color: var(--teal-300);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+.table-card:active { transform: translateY(0); }
+
+.table-card.free {
+  background: linear-gradient(180deg, var(--green-50), var(--surface));
+}
+.table-card.free .table-num { color: var(--green-700); }
+.table-card.occupied {
+  background: linear-gradient(180deg, var(--amber-50), var(--surface));
+  border-color: #FDE68A;
+}
+.table-card.occupied .table-num { color: var(--amber-700); }
+
+.table-num {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 36px;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+.table-num small {
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink-500);
+}
+.table-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 10px;
+}
+.table-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.table-badge::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+.table-card.free .table-badge { color: var(--green-700); }
+.table-card.free .table-badge::before { background: var(--green-500); box-shadow: 0 0 0 3px var(--green-100); }
+.table-card.occupied .table-badge { color: var(--amber-700); }
+.table-card.occupied .table-badge::before { background: var(--amber-500); box-shadow: 0 0 0 3px var(--amber-100); animation: pulse 2s infinite; }
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
+}
+.table-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 12px;
+  color: var(--ink-500);
+  margin-top: 2px;
+}
+.table-meta strong {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  color: var(--ink-900);
+  font-size: 13px;
+}
+
+.action-hint {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--teal-50);
+  border: 1px solid var(--teal-100);
+  border-radius: var(--radius);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: var(--teal-700);
+  line-height: 1.5;
+}
+.action-hint .ico {
+  flex-shrink: 0;
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ====================================================
+   SCREEN: ORDER
+   ==================================================== */
+.order-toolbar {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.guest-stepper {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-alt);
+  padding: 4px;
+  border-radius: 10px;
+}
+.guest-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--ink-700);
+  font-size: 18px;
+  font-weight: 600;
+  transition: all 0.12s;
+}
+.guest-btn:hover:not(:disabled) { color: var(--teal-700); }
+.guest-btn:disabled { opacity: 0.35; cursor: not-allowed; }
+.guest-val {
+  min-width: 60px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-900);
+}
+.guest-val small { color: var(--ink-500); font-weight: 500; margin-left: 2px; }
+
+.cat-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  margin: 0 -16px 14px;
+  padding: 0 16px 4px;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cat-tabs::-webkit-scrollbar { display: none; }
+.cat-pill {
+  padding: 9px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--ink-700);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.cat-pill.active {
+  background: var(--teal-600);
+  color: white;
+  border-color: var(--teal-600);
+  box-shadow: 0 2px 6px -1px rgba(13,148,136,0.3);
+}
+
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+@media (min-width: 600px) { .menu-grid { grid-template-columns: repeat(3, 1fr); gap: 12px; } }
+@media (min-width: 900px) { .menu-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.menu-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  position: relative;
+  transition: all 0.15s;
+  box-shadow: var(--shadow-sm);
+  width: 100%;
+  min-height: 110px;
+}
+.menu-card:hover {
+  border-color: var(--teal-300);
+  box-shadow: var(--shadow);
+  transform: translateY(-2px);
+}
+.menu-card:active { transform: translateY(0); }
+.menu-card .emoji {
+  font-size: 28px;
+  line-height: 1;
+}
+.menu-card .name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-900);
+  line-height: 1.25;
+}
+.menu-card .price {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--teal-700);
+  margin-top: auto;
+}
+.menu-card .count-badge {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: var(--teal-600);
+  color: white;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 12px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 4px -1px rgba(13,148,136,0.4);
+  animation: badgePop 0.25s cubic-bezier(.2,1.6,.4,1);
+}
+@keyframes badgePop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+
+/* Cart preview */
+.cart-preview {
+  position: fixed;
+  bottom: calc(var(--bottombar-h) + var(--safe-bottom) + 8px);
+  left: 16px;
+  right: 16px;
+  max-width: 688px;
+  margin: 0 auto;
+  z-index: 25;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transform: translateY(0);
+  transition: all 0.25s cubic-bezier(.2,.7,.2,1);
+  animation: cartIn 0.3s cubic-bezier(.2,.7,.2,1);
+}
+@keyframes cartIn {
+  from { transform: translateY(20px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.cart-preview.hidden { display: none; }
+.cart-count {
+  background: var(--teal-600);
+  color: white;
+  min-width: 32px;
+  height: 32px;
+  padding: 0 9px;
+  border-radius: 16px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+}
+.cart-info { flex: 1; min-width: 0; }
+.cart-info .lbl { font-size: 11px; color: var(--ink-500); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.cart-info .val {
+  font-family: var(--font-mono);
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--ink-900);
+}
+.cart-expand-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--bg-alt);
+  display: grid;
+  place-items: center;
+  color: var(--ink-700);
+  transition: background 0.15s;
+}
+.cart-expand-btn:hover { background: var(--border); }
+.cart-expand-btn svg { width: 18px; height: 18px; transition: transform 0.2s; }
+.cart-expand-btn.open svg { transform: rotate(180deg); }
+
+/* Cart sheet (full list) */
+.cart-sheet-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.4);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  z-index: 60;
+  animation: fadeIn 0.2s;
+}
+.cart-sheet {
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-radius: 22px 22px 0 0;
+  padding: 20px 20px calc(20px + var(--safe-bottom));
+  z-index: 61;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  animation: sheetIn 0.28s cubic-bezier(.2,.7,.2,1);
+  box-shadow: 0 -10px 30px -10px rgba(15,23,42,0.2);
+}
+@keyframes sheetIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+.sheet-handle {
+  width: 40px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
+  margin: 0 auto 14px;
+}
+.sheet-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+.sheet-head h3 {
+  font-size: 17px;
+  font-weight: 700;
+}
+.sheet-close {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--bg-alt);
+  color: var(--ink-700);
+}
+.sheet-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -4px;
+}
+.cart-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 4px;
+  border-bottom: 1px dashed var(--border);
+}
+.cart-row:last-child { border-bottom: 0; }
+.cart-row .em { font-size: 22px; line-height: 1; }
+.cart-row .nm { font-size: 14px; font-weight: 600; }
+.cart-row .nm .pr { display: block; font-size: 12px; color: var(--ink-500); font-family: var(--font-mono); font-weight: 500; margin-top: 1px; }
+.qty-stepper {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bg-alt);
+  padding: 3px;
+  border-radius: 9px;
+}
+.qty-stepper-btn {
+  width: 26px; height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--ink-700);
+  font-size: 14px;
+  font-weight: 600;
+  transition: all 0.12s;
+}
+.qty-stepper-btn:hover { color: var(--teal-700); }
+.qty-val {
+  min-width: 22px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+}
+.cart-row .subtotal {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--teal-700);
+  min-width: 75px;
+  text-align: right;
+}
+
+.sheet-total {
+  padding: 14px 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-top: 2px solid var(--ink-900);
+  margin-top: 6px;
+}
+.sheet-total .lbl { font-size: 14px; color: var(--ink-700); font-weight: 600; }
+.sheet-total .val {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 28px;
+  letter-spacing: -0.02em;
+  color: var(--ink-900);
+}
+
+/* ====================================================
+   SCREEN: SPLIT (TAP-TO-ASSIGN + drag bonus)
+   ==================================================== */
+.split-summary {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  font-size: 13px;
+}
+.split-summary .stat { color: var(--ink-500); display: flex; align-items: baseline; gap: 6px; }
+.split-summary .stat strong { color: var(--ink-900); font-weight: 700; font-size: 14px; }
+.split-summary .stat.warn strong { color: var(--amber-700); }
+.split-summary .stat.ok strong { color: var(--green-700); }
+
+/* Selection bar (shows when items are selected) */
+.selection-bar {
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 20;
+  background: var(--teal-600);
+  color: white;
+  padding: 12px 16px;
+  margin: -16px -16px 14px;
+  border-radius: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  animation: slideDown 0.25s cubic-bezier(.2,.7,.2,1);
+  box-shadow: 0 4px 12px -2px rgba(13,148,136,0.3);
+}
+@keyframes slideDown {
+  from { transform: translateY(-8px); opacity: 0; }
+  to   { transform: translateY(0); opacity: 1; }
+}
+.selection-bar .info { display: flex; align-items: center; gap: 8px; }
+.selection-bar .info .num {
+  background: white;
+  color: var(--teal-700);
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 13px;
+}
+.selection-bar .clear-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.18);
+  color: white;
+}
+.selection-bar .clear-btn:hover { background: rgba(255,255,255,0.28); }
+
+.bills-container {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bin {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  transition: all 0.18s;
+  box-shadow: var(--shadow-sm);
+}
+.bin.target-active {
+  border-color: var(--teal-500);
+  background: var(--teal-50);
+  box-shadow: 0 0 0 3px rgba(20,184,166,0.15), var(--shadow);
+  animation: pulseTarget 1.5s infinite;
+}
+@keyframes pulseTarget {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(20,184,166,0.15), var(--shadow); }
+  50%      { box-shadow: 0 0 0 6px rgba(20,184,166,0.08), var(--shadow); }
+}
+.bin.drop-hover {
+  border-color: var(--teal-600);
+  background: var(--teal-100);
+  transform: scale(1.005);
+}
+
+.bin-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 12px;
+  margin-bottom: 10px;
+  border-bottom: 1px solid var(--border);
+}
+.bin-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+}
+.bin-title .marker {
+  width: 12px; height: 12px;
+  border-radius: 50%;
+}
+.bin-pool .marker { background: var(--ink-400); }
+.bin-bill[data-color="0"] .marker { background: var(--teal-500); }
+.bin-bill[data-color="1"] .marker { background: var(--plum-500); }
+.bin-bill[data-color="2"] .marker { background: var(--amber-500); }
+.bin-bill[data-color="3"] .marker { background: var(--rose-500); }
+
+.bin-bill[data-color="0"] { border-left: 4px solid var(--teal-500); }
+.bin-bill[data-color="1"] { border-left: 4px solid var(--plum-500); }
+.bin-bill[data-color="2"] { border-left: 4px solid var(--amber-500); }
+.bin-bill[data-color="3"] { border-left: 4px solid var(--rose-500); }
+
+.bin-actions { display: flex; align-items: center; gap: 6px; }
+.bin-count {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink-500);
+  background: var(--bg-alt);
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+.bin-del {
+  width: 28px; height: 28px;
+  border-radius: 7px;
+  display: grid; place-items: center;
+  color: var(--ink-400);
+  background: transparent;
+  transition: all 0.15s;
+}
+.bin-del:hover { background: var(--rose-50); color: var(--rose-600); }
+.bin-del svg { width: 16px; height: 16px; }
+
+.bin-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 60px;
+}
+.bin-empty {
+  padding: 20px 12px;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--ink-400);
+  font-style: italic;
+  margin: 2px 0;
+}
+
+/* Dish (item) - the draggable / tappable card */
+.dish {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 12px;
+  background: var(--bg-alt);
+  border: 1.5px solid transparent;
+  border-radius: 10px;
+  font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  transition: all 0.15s;
+  /* Allow vertical scroll; drag only triggered by long-press */
+  touch-action: pan-y;
+  position: relative;
+  animation: dishIn 0.2s ease;
+}
+.dish.dragging {
+  opacity: 0.4;
+  touch-action: none;
+}
+.dish.long-pressing {
+  background: var(--teal-100);
+  border-color: var(--teal-400);
+  transform: scale(1.02);
+  box-shadow: 0 0 0 4px rgba(20,184,166,0.12);
+  transition: all 0.15s;
+}
+@keyframes dishIn {
+  from { opacity: 0; transform: scale(0.97); }
+  to   { opacity: 1; transform: scale(1); }
+}
+.dish:hover { background: var(--surface); border-color: var(--border-strong); }
+.dish:active { transform: scale(0.98); }
+.dish.selected {
+  background: var(--teal-50);
+  border-color: var(--teal-500);
+  box-shadow: 0 0 0 3px rgba(20,184,166,0.15);
+}
+.dish.selected::after {
+  content: "✓";
+  position: absolute;
+  top: -6px; right: -6px;
+  width: 22px; height: 22px;
+  background: var(--teal-600);
+  color: white;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--surface);
+  animation: badgePop 0.2s cubic-bezier(.2,1.6,.4,1);
+}
+.dish .em { font-size: 22px; line-height: 1; }
+.dish .nm { font-weight: 600; color: var(--ink-900); line-height: 1.2; }
+.dish .pr {
+  font-family: var(--font-mono);
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--teal-700);
+}
+.bin-bill[data-color="1"] .dish .pr { color: var(--plum-600); }
+.bin-bill[data-color="2"] .dish .pr { color: var(--amber-700); }
+.bin-bill[data-color="3"] .dish .pr { color: var(--rose-700); }
+
+/* Drag ghost */
+.drag-ghost {
+  position: fixed;
+  pointer-events: none;
+  z-index: 999;
+  opacity: 0.94;
+  transform: rotate(-2deg) scale(1.02);
+  box-shadow: var(--shadow-lg);
+  border-radius: 10px;
+  background: var(--surface);
+  border: 2px solid var(--teal-500);
+  padding: 11px 12px;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.bin-footer {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.bin-footer .lbl { font-size: 12px; color: var(--ink-500); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 600; }
+.bin-footer .val {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
+.bin-bill[data-color="0"] .bin-footer .val { color: var(--teal-700); }
+.bin-bill[data-color="1"] .bin-footer .val { color: var(--plum-600); }
+.bin-bill[data-color="2"] .bin-footer .val { color: var(--amber-700); }
+.bin-bill[data-color="3"] .bin-footer .val { color: var(--rose-600); }
+.bin-pool .bin-footer .val { color: var(--ink-700); }
+
+.add-bill-btn {
+  width: 100%;
+  padding: 14px;
+  border: 2px dashed var(--border-strong);
+  background: transparent;
+  border-radius: var(--radius);
+  color: var(--ink-500);
+  font-weight: 600;
+  font-size: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+.add-bill-btn:hover:not(:disabled) {
+  border-color: var(--teal-500);
+  color: var(--teal-700);
+  background: var(--teal-50);
+}
+.add-bill-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* Helper tip */
+.split-tip {
+  margin-top: 14px;
+  padding: 12px 14px;
+  background: var(--amber-50);
+  border: 1px solid var(--amber-100);
+  border-radius: var(--radius);
+  font-size: 12px;
+  color: var(--amber-700);
+  line-height: 1.5;
+}
+.split-tip strong { font-weight: 700; }
+
+/* ====================================================
+   SCREEN: PAYMENT
+   ==================================================== */
+.pay-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.pay-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+}
+.pay-card[data-color="0"]::before { background: var(--teal-500); }
+.pay-card[data-color="1"]::before { background: var(--plum-500); }
+.pay-card[data-color="2"]::before { background: var(--amber-500); }
+.pay-card[data-color="3"]::before { background: var(--rose-500); }
+.pay-card::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+}
+.pay-card.paid {
+  background: var(--green-50);
+  border-color: var(--green-100);
+}
+.pay-card.paid::before { background: var(--green-500); }
+
+.pay-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.pay-head h3 {
+  font-size: 15px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.pay-head h3 .marker {
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.pay-card[data-color="0"] .marker { background: var(--teal-500); }
+.pay-card[data-color="1"] .marker { background: var(--plum-500); }
+.pay-card[data-color="2"] .marker { background: var(--amber-500); }
+.pay-card[data-color="3"] .marker { background: var(--rose-500); }
+.pay-card.paid .marker { background: var(--green-500); }
+
+.pay-amount {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 24px;
+  letter-spacing: -0.02em;
+  color: var(--ink-900);
+}
+.pay-items-summary {
+  font-size: 13px;
+  color: var(--ink-500);
+  background: var(--bg-alt);
+  padding: 10px 12px;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 100px;
+  overflow-y: auto;
+}
+.pay-items-summary .row { display: flex; justify-content: space-between; gap: 12px; }
+.pay-items-summary .row span:first-child { color: var(--ink-700); }
+.pay-items-summary .row span:last-child { font-family: var(--font-mono); }
+
+.pm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.pm-btn {
+  padding: 14px 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 12px;
+  color: var(--ink-700);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s;
+  min-height: 78px;
+}
+.pm-btn:hover:not(:disabled) {
+  border-color: var(--teal-300);
+  color: var(--teal-700);
+  background: var(--teal-50);
+}
+.pm-btn.selected {
+  background: var(--teal-100);
+  border-color: var(--teal-600);
+  color: var(--teal-700);
+  box-shadow: 0 0 0 3px rgba(13,148,136,0.15);
+}
+.pm-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.pm-btn .ico { font-size: 24px; line-height: 1; }
+
+.pay-status {
+  padding: 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.pay-status.pending {
+  background: var(--bg-alt);
+  color: var(--ink-500);
+  border: 1px dashed var(--border-strong);
+}
+.pay-status.done {
+  background: var(--green-100);
+  color: var(--green-700);
+  border: 1px solid var(--green-500);
+}
+.pay-status.done .ico { color: var(--green-600); }
+
+/* ====================================================
+   MODAL
+   ==================================================== */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15,23,42,0.5);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  padding-bottom: calc(16px + var(--safe-bottom));
+  animation: fadeIn 0.2s;
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.modal {
+  background: var(--surface);
+  border-radius: 20px;
+  max-width: 420px;
+  width: 100%;
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  animation: modalIn 0.3s cubic-bezier(.2,.7,.2,1);
+}
+@keyframes modalIn {
+  from { transform: translateY(20px) scale(0.96); opacity: 0; }
+  to   { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.modal-head {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+.modal-head h2 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 19px;
+  letter-spacing: -0.02em;
+}
+.modal-head h2 em { color: var(--teal-600); font-style: italic; }
+.modal-close {
+  width: 32px; height: 32px;
+  border-radius: 8px;
+  background: var(--bg-alt);
+  color: var(--ink-700);
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+.modal-close svg { width: 16px; height: 16px; }
+.modal-close:hover { background: var(--border); }
+
+.modal-body {
+  padding: 18px 20px;
+}
+.modal-body p {
+  font-size: 14px;
+  color: var(--ink-700);
+  margin-bottom: 12px;
+}
+.modal-actions {
+  padding: 14px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* QR modal */
+.qr-modal-body {
+  padding: 22px 20px;
+  text-align: center;
+}
+.qr-amount {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 32px;
+  letter-spacing: -0.025em;
+  color: var(--ink-900);
+  margin-bottom: 4px;
+}
+.qr-bill-label {
+  font-size: 13px;
+  color: var(--ink-500);
+  margin-bottom: 22px;
+}
+.qr-code-wrap {
+  background: var(--surface);
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  display: inline-block;
+  margin-bottom: 16px;
+  position: relative;
+}
+.qr-code-wrap canvas, .qr-code-wrap img {
+  display: block;
+  margin: 0;
+}
+.qr-helper {
+  font-size: 13px;
+  color: var(--ink-500);
+  margin-bottom: 18px;
+  line-height: 1.45;
+}
+.qr-helper strong { color: var(--ink-900); font-weight: 600; }
+.qvik-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  margin-bottom: 14px;
+  background: var(--teal-50);
+  border: 1px solid var(--teal-100);
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal-700);
+  letter-spacing: 0.01em;
+}
+.qvik-badge svg { color: var(--teal-600); }
+.qr-scan-anim {
+  position: absolute;
+  inset: 18px;
+  pointer-events: none;
+  border-radius: 6px;
+  overflow: hidden;
+}
+.qr-scan-line {
+  position: absolute;
+  left: 0; right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--teal-500), transparent);
+  box-shadow: 0 0 12px var(--teal-500);
+  animation: scan 2.5s linear infinite;
+  border-radius: 2px;
+}
+@keyframes scan {
+  0%   { top: 0%; opacity: 0.8; }
+  50%  { top: 100%; opacity: 1; }
+  100% { top: 0%; opacity: 0.8; }
+}
+
+/* Receipt modal */
+.receipt-modal {
+  max-width: 380px;
+}
+.receipt-modal .modal-head h2 { font-size: 17px; }
+.receipt {
+  background: white;
+  margin: 16px;
+  padding: 24px 22px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: #1a1a1a;
+  line-height: 1.5;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+}
+.receipt-header {
+  text-align: center;
+  padding-bottom: 16px;
+  border-bottom: 1.5px dashed #888;
+  margin-bottom: 12px;
+}
+.receipt-logo {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  color: var(--teal-700);
+  margin-bottom: 4px;
+}
+.receipt-logo em { font-style: italic; }
+.receipt-tagline {
+  font-family: var(--font-sans);
+  font-size: 10px;
+  color: #555;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.receipt-place {
+  font-family: var(--font-sans);
+  font-size: 11px;
+  color: #444;
+  line-height: 1.4;
+}
+.receipt-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px 12px;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px dashed #888;
+  font-size: 11px;
+}
+.receipt-meta .lbl { color: #777; }
+.receipt-meta .val { font-weight: 600; text-align: right; }
+
+.receipt-items {
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1.5px dashed #888;
+}
+.receipt-item {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 2px;
+  margin-bottom: 6px;
+}
+.receipt-item-name {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.receipt-item-name .nm {
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 12px;
+  color: #1a1a1a;
+}
+.receipt-item-name .total {
+  font-weight: 600;
+  font-size: 12px;
+}
+.receipt-item-detail {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: #777;
+  padding-left: 8px;
+}
+
+.receipt-totals {
+  margin-bottom: 14px;
+}
+.receipt-total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 3px 0;
+  font-size: 11px;
+}
+.receipt-total-row.grand {
+  font-size: 14px;
+  font-weight: 700;
+  border-top: 1.5px solid #1a1a1a;
+  border-bottom: 1.5px solid #1a1a1a;
+  padding: 8px 0;
+  margin-top: 6px;
+}
+.receipt-total-row .lbl { color: #444; }
+.receipt-total-row.grand .lbl { color: #1a1a1a; }
+.receipt-payment {
+  margin-bottom: 12px;
+  padding: 8px 10px;
+  background: #f4f4f4;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--font-sans);
+}
+.receipt-payment-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 2px 0;
+}
+.receipt-payment-row .meth { font-weight: 600; }
+.receipt-payment-row .amt { font-family: var(--font-mono); font-weight: 600; }
+
+.receipt-footer {
+  text-align: center;
+  font-family: var(--font-sans);
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1.5px dashed #888;
+}
+.receipt-thanks {
+  font-size: 12px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+}
+.receipt-meta-small {
+  font-size: 10px;
+  color: #888;
+  margin-top: 8px;
+  line-height: 1.4;
+}
+.receipt-meta-small .ref {
+  font-family: var(--font-mono);
+  font-size: 9px;
+  letter-spacing: 0.05em;
+}
+
+/* ====================================================
+   CLOSED SUMMARY
+   ==================================================== */
+.success-hero {
+  text-align: center;
+  padding: 32px 20px 24px;
+}
+.success-circle {
+  width: 76px; height: 76px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--green-500), var(--green-600));
+  display: grid; place-items: center;
+  box-shadow: 0 10px 30px -5px rgba(34,197,94,0.4);
+  animation: successPop 0.5s cubic-bezier(.2,1.5,.4,1);
+}
+@keyframes successPop {
+  from { transform: scale(0); }
+  60%  { transform: scale(1.08); }
+  to   { transform: scale(1); }
+}
+.success-circle svg {
+  width: 38px;
+  height: 38px;
+  color: white;
+}
+.success-hero h1 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 26px;
+  letter-spacing: -0.025em;
+  color: var(--ink-900);
+}
+.success-hero h1 em { color: var(--teal-600); font-style: italic; }
+.success-hero p {
+  margin-top: 8px;
+  color: var(--ink-500);
+  font-size: 14px;
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin: 24px 0;
+}
+@media (min-width: 480px) { .stats-grid { grid-template-columns: repeat(4, 1fr); } }
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 14px;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+}
+.stat-card .val {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  color: var(--teal-700);
+  line-height: 1;
+}
+.stat-card .lbl {
+  font-size: 11px;
+  color: var(--ink-500);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+  margin-top: 6px;
+}
+
+.log-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px;
+  box-shadow: var(--shadow-sm);
+  margin-bottom: 12px;
+}
+.log-card h3 {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--ink-500);
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+.log-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: 13px;
+}
+.log-row:last-child { border-bottom: 0; }
+.log-row .time {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  color: var(--ink-500);
+}
+.log-row .desc { font-weight: 600; color: var(--ink-900); }
+.log-row .desc small { display: block; font-weight: 500; color: var(--ink-500); font-size: 11px; margin-top: 1px; }
+.log-row .amt {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--teal-700);
+}
+.log-row.show-receipt-row {
+  border-bottom: 0;
+  padding-top: 4px;
+}
+.show-receipt-btn {
+  font-size: 12px;
+  color: var(--teal-700);
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 7px;
+  background: var(--teal-50);
+  transition: background 0.15s;
+}
+.show-receipt-btn:hover { background: var(--teal-100); }
+
+/* ====================================================
+   TOAST
+   ==================================================== */
+#toast-root {
+  position: fixed;
+  top: calc(var(--topbar-h) + 12px + var(--safe-top));
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+  max-width: calc(100vw - 32px);
+}
+.toast {
+  background: var(--ink-900);
+  color: white;
+  padding: 11px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: toastIn 0.25s cubic-bezier(.2,.7,.2,1);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  max-width: 100%;
+}
+.toast.out { animation: toastOut 0.25s ease forwards; }
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes toastOut {
+  to { opacity: 0; transform: translateY(-10px); }
+}
+.toast .ico {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  color: var(--teal-400);
+}
+.toast.success .ico { color: var(--green-500); }
+.toast.error .ico { color: var(--rose-500); }
+.toast .body { line-height: 1.4; }
+.toast strong { font-weight: 700; }
+
+/* ====================================================
+   WELCOME MODAL
+   ==================================================== */
+.welcome-body { padding: 4px 20px 18px; }
+.welcome-body h3 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+  margin-bottom: 6px;
+}
+.welcome-body h3 em { color: var(--teal-600); font-style: italic; }
+.welcome-body > p {
+  font-size: 14px;
+  color: var(--ink-500);
+  margin-bottom: 18px;
+  line-height: 1.5;
+}
+.welcome-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+.welcome-step {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  background: var(--teal-50);
+  border: 1px solid var(--teal-100);
+  border-radius: 12px;
+}
+.welcome-step .n {
+  width: 26px;
+  height: 26px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  background: var(--teal-600);
+  color: white;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  font-family: var(--font-mono);
+}
+.welcome-step .txt {
+  font-size: 13px;
+  color: var(--ink-700);
+  line-height: 1.45;
+}
+.welcome-step .txt strong { color: var(--ink-900); font-weight: 700; }
+
+/* ====================================================
+   QUICK ACTIONS (SPLIT SCREEN)
+   ====================================================*/
+.split-quick-actions {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px;
+  margin-bottom: 12px;
+  box-shadow: var(--shadow-sm);
+}
+.split-quick-actions .qa-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-500);
+  font-weight: 700;
+  padding: 2px 4px 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.split-quick-actions .qa-label .badge {
+  background: var(--teal-100);
+  color: var(--teal-700);
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 700;
+}
+.split-quick-actions .qa-buttons {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.qa-btn {
+  padding: 12px 10px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-900);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+  transition: all 0.15s;
+  min-height: 68px;
+  line-height: 1.25;
+}
+.qa-btn .ico { font-size: 20px; line-height: 1; }
+.qa-btn small {
+  font-size: 11px;
+  color: var(--ink-500);
+  font-weight: 500;
+}
+.qa-btn:hover:not(:disabled) {
+  border-color: var(--teal-500);
+  background: var(--teal-50);
+  color: var(--teal-700);
+}
+.qa-btn:hover:not(:disabled) small { color: var(--teal-600); }
+.qa-btn:active:not(:disabled) { transform: scale(0.98); }
+.qa-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+@media (max-width: 380px) {
+  .split-quick-actions .qa-buttons { grid-template-columns: 1fr; }
+}
+
+/* ====================================================
+   CATEGORIZED ITEMS IN PAY SUMMARY
+   ====================================================*/
+.pay-items-summary {
+  max-height: 180px;
+}
+.pay-items-summary .cat-head {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--ink-500);
+  font-weight: 700;
+  padding: 6px 0 3px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.pay-items-summary .cat-head:first-child { padding-top: 0; }
+.pay-items-summary .cat-head .ico { font-size: 13px; }
+.pay-items-summary .cat-head::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ====================================================
+   TIP SELECTOR (PAYMENT)
+   ====================================================*/
+.tip-selector {
+  padding: 12px;
+  background: var(--bg-alt);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pay-card.paid .tip-selector { background: rgba(34,197,94,0.08); }
+.tip-selector .tip-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--ink-500);
+  font-weight: 700;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+.tip-selector .tip-label .amt {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  color: var(--teal-700);
+  font-weight: 700;
+  text-transform: none;
+  letter-spacing: 0;
+}
+.tip-options {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+.tip-btn {
+  padding: 9px 4px;
+  border-radius: 8px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-700);
+  transition: all 0.15s;
+}
+.tip-btn:hover:not(:disabled) { border-color: var(--teal-300); color: var(--teal-700); }
+.tip-btn.selected {
+  background: var(--teal-600);
+  color: white;
+  border-color: var(--teal-600);
+  box-shadow: 0 2px 6px -1px rgba(13,148,136,0.3);
+}
+.tip-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* Pay total breakdown */
+.pay-breakdown {
+  padding: 10px 12px;
+  background: var(--bg-alt);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+.pay-card.paid .pay-breakdown { background: rgba(34,197,94,0.08); }
+.pay-breakdown .row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  color: var(--ink-700);
+}
+.pay-breakdown .row .mono { font-family: var(--font-mono); font-weight: 600; }
+.pay-breakdown .row.tip-row { color: var(--teal-700); }
+.pay-breakdown .row.tip-row .mono { color: var(--teal-700); }
+.pay-breakdown .row.grand {
+  color: var(--ink-900);
+  font-weight: 700;
+  font-size: 15px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  margin-top: 3px;
+}
+.pay-breakdown .row.grand .mono { color: var(--ink-900); font-size: 16px; }
+.pay-card.paid .pay-breakdown .row.grand { color: var(--green-700); }
+.pay-card.paid .pay-breakdown .row.grand .mono { color: var(--green-700); }
+
+/* Receipt - kategória + borravaló */
+.receipt-cat-head {
+  font-family: var(--font-sans);
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #777;
+  font-weight: 700;
+  padding: 5px 0 3px;
+  margin-bottom: 3px;
+  border-bottom: 1px dotted #bbb;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.receipt-cat-head:first-child { padding-top: 0; }
+.receipt-total-row.tip-row { color: #0F766E; font-weight: 600; }
+.receipt-total-row.tip-row .mono { color: #0F766E; }
+
+/* ====================================================
+   MERGE (ASZTAL-ÖSSZEVONÁS)
+   ====================================================*/
+.merge-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.merge-bar .legend-pair {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-500);
+  flex: 1;
+  min-width: 0;
+}
+.merge-bar .legend-pair .dot { display: inline-flex; align-items: center; gap: 5px; }
+.merge-bar .legend-pair .dot::before {
+  content: ""; width: 9px; height: 9px; border-radius: 50%;
+}
+.merge-bar .legend-pair .free::before     { background: var(--green-500); }
+.merge-bar .legend-pair .occupied::before { background: var(--amber-500); }
+.merge-bar .legend-pair .merged::before   { background: var(--teal-500); }
+
+.merge-btn-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1.5px solid var(--border-strong);
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-700);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.merge-btn-trigger:hover {
+  border-color: var(--teal-500);
+  color: var(--teal-700);
+  background: var(--teal-50);
+}
+.merge-btn-trigger:active { transform: scale(0.97); }
+.merge-btn-trigger .ico { font-size: 14px; }
+
+/* Merge mode banner (sticky tetejére) */
+.merge-mode-banner {
+  background: var(--teal-600);
+  color: white;
+  padding: 12px 16px;
+  margin: -16px -16px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  position: sticky;
+  top: var(--topbar-h);
+  z-index: 25;
+  box-shadow: 0 4px 12px -2px rgba(13,148,136,0.3);
+  animation: slideDown 0.25s cubic-bezier(.2,.7,.2,1);
+}
+.merge-mode-banner .info { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0; }
+.merge-mode-banner .info .num {
+  background: white;
+  color: var(--teal-700);
+  width: 26px; height: 26px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.merge-mode-banner .cancel-btn {
+  font-size: 13px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.18);
+  color: white;
+  flex-shrink: 0;
+}
+.merge-mode-banner .cancel-btn:hover { background: rgba(255,255,255,0.28); }
+
+/* Merge mode-ban a table-card kijelölhető */
+.table-card.merge-selected {
+  border-color: var(--teal-600) !important;
+  background: var(--teal-50) !important;
+  box-shadow: 0 0 0 3px rgba(13,148,136,0.18) !important;
+  transform: translateY(-2px);
+}
+.table-card.merge-selected::after {
+  content: "✓";
+  position: absolute;
+  top: 8px; right: 8px;
+  width: 26px; height: 26px;
+  background: var(--teal-600);
+  color: white;
+  border-radius: 50%;
+  font-size: 15px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 2px 4px -1px rgba(13,148,136,0.4);
+  animation: badgePop 0.2s cubic-bezier(.2,1.6,.4,1);
+}
+.table-card.merge-disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.4);
+}
+.table-card.merge-disabled:hover {
+  transform: none;
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+/* Slave asztal (egy csoport alszerve) */
+.table-card.merged-slave {
+  background: linear-gradient(180deg, var(--teal-50), var(--surface)) !important;
+  border: 1.5px dashed var(--teal-300) !important;
+}
+.table-card.merged-slave .table-num {
+  color: var(--ink-400) !important;
+  font-size: 28px !important;
+}
+.table-card.merged-slave:hover {
+  border-color: var(--teal-500) !important;
+}
+
+/* Master asztal (csoport feje) */
+.table-card.merged-master {
+  background: linear-gradient(180deg, var(--teal-50), var(--surface)) !important;
+  border-color: var(--teal-300) !important;
+  position: relative;
+}
+.table-card.merged-master.occupied {
+  background: linear-gradient(180deg, var(--amber-50), var(--teal-50)) !important;
+}
+
+.merge-link-badge,
+.merge-group-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--teal-700);
+  background: var(--teal-100);
+  padding: 3px 8px;
+  border-radius: 999px;
+  align-self: flex-start;
+}
+.merge-link-badge { margin-top: 4px; }
+.merge-group-label { margin-bottom: 6px; }
+
+/* Group-info chip a Split / Order / Payment screen-en */
+.group-info-bar {
+  background: linear-gradient(135deg, var(--teal-50), var(--teal-100));
+  border: 1px solid var(--teal-300);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+.group-info-bar .gi-text {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--teal-700);
+  font-weight: 600;
+  flex: 1;
+  min-width: 0;
+}
+.group-info-bar .gi-text .gi-ico { font-size: 16px; line-height: 1; }
+.group-info-bar .gi-text strong { color: var(--teal-700); font-weight: 700; }
+.group-info-bar .gi-unmerge {
+  padding: 7px 12px;
+  background: var(--surface);
+  border: 1px solid var(--teal-500);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--teal-700);
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.group-info-bar .gi-unmerge:hover {
+  background: var(--teal-600);
+  color: white;
+  border-color: var(--teal-600);
+}
+
+/* ====================================================
+   UTILITIES
+   ====================================================*/
+.hidden { display: none !important; }
+.mono { font-family: var(--font-mono); }
+
+/* Print rules — when user prints the page */
+@media print {
+  .topbar, .bottom-bar, .modal-overlay, #toast-root, .modal-actions, .modal-head .modal-close { display: none !important; }
+  body { background: white; }
+  .modal { box-shadow: none; max-width: none; }
+  .receipt { border: 0; margin: 0; }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand" id="brandLogo">
+      <div class="brand-mark"></div>
+      Split<em>Easy</em>
+    </div>
+    <div class="topbar-spacer"></div>
+    <div class="waiter-chip">
+      <div class="avatar">A</div>
+      <span>Anna</span>
+    </div>
+    <button class="topbar-btn" id="resetBtn" title="Demó újraindítása">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12a9 9 0 0 1 15.5-6.3L21 8M21 3v5h-5M21 12a9 9 0 0 1-15.5 6.3L3 16M3 21v-5h5"/>
+      </svg>
+    </button>
+  </header>
+
+  <!-- MAIN CONTENT -->
+  <main class="screen-wrap" id="screen-root"></main>
+
+  <!-- BOTTOM BAR -->
+  <div class="bottom-bar hidden" id="bottom-bar"></div>
+</div>
+
+<!-- MODAL ROOT -->
+<div id="modal-root"></div>
+
+<!-- TOAST ROOT -->
+<div id="toast-root"></div>
+
+<!-- Hidden container for QR generation -->
+<div id="qr-hidden" style="position:absolute;left:-9999px;top:-9999px;"></div>
+
+<script>
+'use strict';
+
+/* =====================================================
+   DATA — MENU
+   ===================================================== */
+const MENU = [
+  // Előétel
+  { id: 'ap1', cat: 'Előétel',  emoji: '🥗', name: 'Caesar saláta',     price: 2790 },
+  { id: 'ap2', cat: 'Előétel',  emoji: '🍲', name: 'Gulyásleves',       price: 1990 },
+  { id: 'ap3', cat: 'Előétel',  emoji: '🧀', name: 'Sajttál',           price: 3290 },
+  { id: 'ap4', cat: 'Előétel',  emoji: '🍞', name: 'Bruschetta',        price: 1890 },
+  // Főétel
+  { id: 'ma1', cat: 'Főétel',   emoji: '🍔', name: 'Burger',            price: 3490 },
+  { id: 'ma2', cat: 'Főétel',   emoji: '🍕', name: 'Pizza Margherita',  price: 3290 },
+  { id: 'ma3', cat: 'Főétel',   emoji: '🍗', name: 'Rántott csirke',    price: 3490 },
+  { id: 'ma4', cat: 'Főétel',   emoji: '🥩', name: 'Marhapörkölt',      price: 4190 },
+  { id: 'ma5', cat: 'Főétel',   emoji: '🍝', name: 'Carbonara',         price: 3290 },
+  { id: 'ma6', cat: 'Főétel',   emoji: '🐟', name: 'Lazac steak',       price: 4690 },
+  // Ital
+  { id: 'dr1', cat: 'Ital',     emoji: '🥤', name: 'Cola 0,33',         price:  990 },
+  { id: 'dr2', cat: 'Ital',     emoji: '🍺', name: 'Craft sör',         price: 1290 },
+  { id: 'dr3', cat: 'Ital',     emoji: '🍷', name: 'Pohár bor',         price: 1690 },
+  { id: 'dr4', cat: 'Ital',     emoji: '💧', name: 'Ásványvíz',         price:  690 },
+  { id: 'dr5', cat: 'Ital',     emoji: '☕', name: 'Espresso',          price:  690 },
+  { id: 'dr6', cat: 'Ital',     emoji: '🧃', name: 'Friss narancslé',   price: 1290 },
+  // Desszert
+  { id: 'de1', cat: 'Desszert', emoji: '🍰', name: 'Tiramisu',          price: 1890 },
+  { id: 'de2', cat: 'Desszert', emoji: '🍫', name: 'Brownie',           price: 1690 },
+  { id: 'de3', cat: 'Desszert', emoji: '🍮', name: 'Crème brûlée',      price: 1990 },
+];
+const CATEGORIES = ['Előétel', 'Főétel', 'Ital', 'Desszert'];
+// Megjelenítési sorrend a számla- és nyugta-összesítőkben (Ital van elöl)
+const RECEIPT_CATEGORIES_ORDER = ['Ital', 'Előétel', 'Főétel', 'Desszert'];
+const CATEGORY_META = {
+  'Ital':     { icon: '🥤', label: 'Italok' },
+  'Előétel':  { icon: '🥗', label: 'Előétel / Leves' },
+  'Főétel':   { icon: '🍽️', label: 'Főétel' },
+  'Desszert': { icon: '🍰', label: 'Desszert' },
+};
+const TIP_OPTIONS = [0, 5, 10, 15];
+const PAYMENT_METHODS = [
+  { id: 'card', label: 'Bankkártya', emoji: '💳' },
+  { id: 'cash', label: 'Készpénz',   emoji: '💵' },
+  { id: 'qr',   label: 'QR-kód',     emoji: '📱' },
+];
+const BILL_COLORS = ['teal', 'plum', 'amber', 'rose'];
+const TABLE_COUNT = 8;
+
+/* =====================================================
+   STATE
+   ===================================================== */
+let uidCounter = 1;
+function makeUnits(items) {
+  const out = [];
+  for (const [menuId, qty] of items) {
+    for (let i = 0; i < qty; i++) out.push({ uid: 'u' + (uidCounter++), menuId });
+  }
+  return out;
+}
+
+function createInitialState() {
+  const tables = {};
+  for (let i = 1; i <= TABLE_COUNT; i++) {
+    tables[i] = {
+      status: 'free', guests: 0, orderUnits: [], openedAt: null,
+      mergedInto: null,   // ha != null → ez egy slave, a master id-je
+      mergedWith: null,   // ha != null → ez egy master, az összes csoporttag id-je (sorted, master is benne)
+    };
+  }
+  // Pre-populated tables (a merged mezők a `mergedInto: null, mergedWith: null` default)
+  tables[3] = {
+    status: 'occupied', guests: 4,
+    orderUnits: makeUnits([
+      ['ma1', 2], ['ma2', 1], ['ma6', 1],
+      ['dr1', 2], ['dr2', 2], ['dr5', 2],
+      ['de1', 1], ['de2', 1],
+    ]),
+    openedAt: Date.now() - 58 * 60 * 1000,
+    mergedInto: null, mergedWith: null,
+  };
+  tables[5] = {
+    status: 'occupied', guests: 2,
+    orderUnits: makeUnits([
+      ['ap1', 1], ['ma5', 1], ['ma4', 1],
+      ['dr3', 2], ['dr4', 1], ['dr5', 2],
+    ]),
+    openedAt: Date.now() - 35 * 60 * 1000,
+    mergedInto: null, mergedWith: null,
+  };
+  tables[6] = {
+    status: 'occupied', guests: 3,
+    orderUnits: makeUnits([
+      ['ap2', 1], ['ma3', 2],
+      ['dr1', 2], ['dr2', 1],
+    ]),
+    openedAt: Date.now() - 12 * 60 * 1000,
+    mergedInto: null, mergedWith: null,
+  };
+  return {
+    screen: 'tables',
+    currentTableId: null,
+    tables,
+    // Order
+    orderCart: [],
+    orderGuests: 2,
+    activeCat: 'Főétel',
+    cartSheetOpen: false,
+    // Split
+    bills: [],
+    selectedUids: new Set(),
+    // Payment
+    billsPaid: [],
+    paySelection: {},
+    payTips: {},          // { billIdx: percent (0|5|10|15) }
+    // Modal state
+    modal: null, // { type, ...data }
+    // Closed
+    closedSummary: null,
+    receiptsByBill: [],
+    // Merge (asztal-összevonás)
+    mergeMode: false,
+    mergeSelected: new Set(),
+  };
+}
+let state = createInitialState();
+let welcomeShown = false;
+
+/* =====================================================
+   HELPERS
+   ===================================================== */
+const $ = (sel, root = document) => root.querySelector(sel);
+const menuOf = id => MENU.find(m => m.id === id);
+function fmtFt(n) {
+  return Math.round(n).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ') + ' Ft';
+}
+function nowTime() {
+  const d = new Date();
+  return d.getHours().toString().padStart(2,'0') + ':' + d.getMinutes().toString().padStart(2,'0');
+}
+function tableTotal(tid) {
+  const t = state.tables[tid]; if (!t) return 0;
+  return t.orderUnits.reduce((s,u) => s + menuOf(u.menuId).price, 0);
+}
+function billTotal(uids) {
+  const t = state.tables[state.currentTableId]; if (!t) return 0;
+  return uids.reduce((s,uid) => {
+    const u = t.orderUnits.find(x => x.uid === uid);
+    return s + (u ? menuOf(u.menuId).price : 0);
+  }, 0);
+}
+function orderCartTotal() {
+  return state.orderCart.reduce((s,r) => s + menuOf(r.menuId).price * r.qty, 0);
+}
+function orderCartCount() {
+  return state.orderCart.reduce((s,r) => s + r.qty, 0);
+}
+function minsAgo(ts) {
+  return Math.max(1, Math.floor((Date.now() - ts) / 60000));
+}
+function genRef(billIdx) {
+  const tid = state.currentTableId || 0;
+  const ts = Date.now().toString(36).toUpperCase().slice(-5);
+  return `T${tid}B${billIdx+1}-${ts}`;
+}
+
+/* Csoportosított tételek a megadott uid-listából,
+   a RECEIPT_CATEGORIES_ORDER sorrendben.
+   Vissza: [ { cat, items: [{ menu, qty, subtotal }, ...], catSubtotal } ] */
+function groupUidsByCategory(uids) {
+  const t = state.tables[state.currentTableId];
+  if (!t) return [];
+  const units = t.orderUnits.filter(u => uids.includes(u.uid));
+  // Csoportosítás kategória + menüid alapján
+  const byCat = {};
+  units.forEach(u => {
+    const m = menuOf(u.menuId);
+    if (!byCat[m.cat]) byCat[m.cat] = {};
+    if (!byCat[m.cat][m.id]) byCat[m.cat][m.id] = { menu: m, qty: 0 };
+    byCat[m.cat][m.id].qty++;
+  });
+  const out = [];
+  for (const cat of RECEIPT_CATEGORIES_ORDER) {
+    if (!byCat[cat]) continue;
+    const items = Object.values(byCat[cat])
+      .sort((a,b) => a.menu.name.localeCompare(b.menu.name))
+      .map(it => ({ ...it, subtotal: it.menu.price * it.qty }));
+    const catSubtotal = items.reduce((s,it) => s + it.subtotal, 0);
+    out.push({ cat, items, catSubtotal });
+  }
+  return out;
+}
+
+function billTipPercent(billIdx) {
+  return state.payTips[billIdx] || 0;
+}
+function billTipAmount(billIdx) {
+  const subtotal = billTotal(state.bills[billIdx]);
+  return Math.round(subtotal * billTipPercent(billIdx) / 100);
+}
+function billGrandTotal(billIdx) {
+  return billTotal(state.bills[billIdx]) + billTipAmount(billIdx);
+}
+
+/* =====================================================
+   MERGE HELPERS (asztal-összevonás)
+   ===================================================== */
+function isSlave(tid) {
+  const t = state.tables[tid];
+  return !!(t && t.mergedInto);
+}
+function isMaster(tid) {
+  const t = state.tables[tid];
+  return !!(t && t.mergedWith && t.mergedWith.length > 1);
+}
+function isMerged(tid) {
+  return isMaster(tid) || isSlave(tid);
+}
+function getMasterId(tid) {
+  const t = state.tables[tid];
+  if (!t) return tid;
+  return t.mergedInto || tid;
+}
+function getGroupMembers(tid) {
+  const masterId = getMasterId(tid);
+  const m = state.tables[masterId];
+  if (m && m.mergedWith && m.mergedWith.length > 1) return m.mergedWith.slice();
+  return [tid];
+}
+/* Formátum: "4–5. asztal" vagy "4–5–6. asztal" csoportra; "4. asztal" önálló asztalra */
+function groupLabel(tid) {
+  const members = getGroupMembers(tid).sort((a, b) => a - b);
+  if (members.length === 1) return members[0] + '. asztal';
+  return members.join('–') + '. asztal';
+}
+
+/* =====================================================
+   TOAST
+   ===================================================== */
+function toast(msg, opts = {}) {
+  const { type = 'info', duration = 2400 } = opts;
+  const root = $('#toast-root');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icon = type === 'success' ? '✓' : type === 'error' ? '✕' : 'ⓘ';
+  el.innerHTML = `<span class="ico">${icon}</span><span class="body">${msg}</span>`;
+  root.appendChild(el);
+  setTimeout(() => {
+    el.classList.add('out');
+    setTimeout(() => el.remove(), 260);
+  }, duration);
+}
+
+/* =====================================================
+   ROUTER / RENDER
+   ===================================================== */
+function goTo(screen) {
+  // Normalize billsPaid when entering payment so allPaid logic is correct
+  if (screen === 'payment') {
+    while (state.billsPaid.length < state.bills.length) state.billsPaid.push(null);
+    state.billsPaid.length = state.bills.length;
+  }
+  state.screen = screen;
+  state.cartSheetOpen = false;
+  render();
+  window.scrollTo({ top: 0, behavior: 'instant' });
+}
+
+function render() {
+  const root = $('#screen-root');
+  const bar = $('#bottom-bar');
+
+  // Clear any stale drag elements
+  clearDragGhost();
+
+  switch (state.screen) {
+    case 'tables':  root.innerHTML = renderTables();  break;
+    case 'order':   root.innerHTML = renderOrder();   break;
+    case 'split':   root.innerHTML = renderSplit();   bindSplitInteractions(); break;
+    case 'payment': root.innerHTML = renderPayment(); break;
+    case 'closed':  root.innerHTML = renderClosed();  break;
+  }
+
+  renderBottomBar(bar);
+  renderModal();
+}
+
+/* =====================================================
+   SCREEN: TABLES
+   ===================================================== */
+function renderTables() {
+  const mergeMode = state.mergeMode;
+  const cards = [];
+
+  for (let i = 1; i <= TABLE_COUNT; i++) {
+    const t = state.tables[i];
+
+    // ===== MERGE MODE rendering =====
+    if (mergeMode) {
+      const isFree = t.status === 'free';
+      const merged = isMerged(i);
+      const isSelectable = isFree && !merged;
+      const isSelected = state.mergeSelected.has(i);
+      const stateClass = isFree ? 'free' : 'occupied';
+      const interactClass = isSelectable
+        ? (isSelected ? 'merge-selected' : '')
+        : 'merge-disabled';
+      const badge = merged
+        ? `<div class="table-badge" style="color:var(--teal-700)">Csoport</div>`
+        : isFree
+        ? `<div class="table-badge">Szabad</div>`
+        : `<div class="table-badge">${t.guests} fő</div>`;
+      cards.push(`
+        <button class="table-card ${stateClass} ${interactClass}" onclick="toggleMergeSelect(${i})">
+          <div class="table-num">${i}<small>. asztal</small></div>
+          <div class="table-info">
+            ${badge}
+            <div class="table-meta">
+              <span>${isSelectable ? (isSelected ? 'Kijelölve ✓' : 'Koppints a kijelöléshez') : merged ? `↪ ${getMasterId(i)}. csoport` : 'Foglalt'}</span>
+            </div>
+          </div>
+        </button>
+      `);
+      continue;
+    }
+
+    // ===== NORMAL rendering =====
+    if (isSlave(i)) {
+      const masterId = getMasterId(i);
+      cards.push(`
+        <button class="table-card merged-slave" onclick="enterTable(${i})">
+          <div class="table-num">${i}<small>. asztal</small></div>
+          <div class="table-info">
+            <div class="merge-link-badge">🔗 ${masterId}. csoport</div>
+            <div class="table-meta"><span>Csoport tag</span></div>
+          </div>
+        </button>
+      `);
+      continue;
+    }
+    if (isMaster(i)) {
+      const label = t.mergedWith.join('–');
+      const memberCount = t.mergedWith.length;
+      if (t.status === 'free') {
+        cards.push(`
+          <button class="table-card free merged-master" onclick="enterTable(${i})">
+            <div class="merge-group-label">🔗 ${label}. asztal</div>
+            <div class="table-num">${i}<small>. csoport</small></div>
+            <div class="table-info">
+              <div class="table-badge" style="color:var(--teal-700)">${memberCount} asztal · új vendég</div>
+            </div>
+          </button>
+        `);
+      } else {
+        const mins = minsAgo(t.openedAt);
+        const tot = tableTotal(i);
+        cards.push(`
+          <button class="table-card occupied merged-master" onclick="enterTable(${i})">
+            <div class="merge-group-label">🔗 ${label}. asztal</div>
+            <div class="table-num">${i}<small>. csoport</small></div>
+            <div class="table-info">
+              <div class="table-badge">${t.guests} fő · ${memberCount} asztal</div>
+              <div class="table-meta"><span>${mins} perce</span><strong>${fmtFt(tot)}</strong></div>
+            </div>
+          </button>
+        `);
+      }
+      continue;
+    }
+
+    // Standalone (nem merge-elt)
+    if (t.status === 'free') {
+      cards.push(`
+        <button class="table-card free" onclick="enterTable(${i})">
+          <div class="table-num">${i}<small>. asztal</small></div>
+          <div class="table-info">
+            <div class="table-badge">Szabad</div>
+            <div class="table-meta"><span>Új vendég</span></div>
+          </div>
+        </button>
+      `);
+    } else {
+      const mins = minsAgo(t.openedAt);
+      const tot = tableTotal(i);
+      cards.push(`
+        <button class="table-card occupied" onclick="enterTable(${i})">
+          <div class="table-num">${i}<small>. asztal</small></div>
+          <div class="table-info">
+            <div class="table-badge">${t.guests} fő</div>
+            <div class="table-meta"><span>${mins} perce</span><strong>${fmtFt(tot)}</strong></div>
+          </div>
+        </button>
+      `);
+    }
+  }
+
+  // Header — merge módban más
+  if (mergeMode) {
+    return `
+      <div class="screen">
+        <div class="merge-mode-banner">
+          <div class="info">
+            <div class="num">${state.mergeSelected.size}</div>
+            <span>Koppints szabad asztalokra az összevonáshoz</span>
+          </div>
+          <button class="cancel-btn" onclick="exitMergeMode()">Mégse</button>
+        </div>
+        <div class="screen-head">
+          <h1>Asztalok <em>összevonása</em></h1>
+          <p>Csak szabad, még össze nem vont asztalokat választhatsz. A legkisebb sorszám lesz a csoport feje.</p>
+        </div>
+        <div class="tables-grid">${cards.join('')}</div>
+      </div>
+    `;
+  }
+
+  // Normál mód
+  return `
+    <div class="screen">
+      <div class="screen-head">
+        <h1>Asztalok</h1>
+        <p>Koppints egy asztalra a rendelés vagy számla megnyitásához.</p>
+      </div>
+      <div class="merge-bar">
+        <div class="legend-pair">
+          <span class="dot free">Szabad</span>
+          <span class="dot occupied">Foglalt</span>
+          <span class="dot merged">Összevont</span>
+        </div>
+        <button class="merge-btn-trigger" onclick="enterMergeMode()">
+          <span class="ico">🔗</span>Asztalok összevonása
+        </button>
+      </div>
+      <div class="tables-grid">${cards.join('')}</div>
+      <div class="action-hint">
+        <span class="ico">⚡</span>
+        <span><strong>Gyors demó:</strong> a 3., 5. és 6. asztalon már nyitott rendelés van — koppints rájuk, hogy egyből a számla-szétosztáshoz ugorj. Két szabad asztal összevonásához nyomd meg a <strong>🔗 gombot</strong>.</span>
+      </div>
+    </div>
+  `;
+}
+
+function enterTable(id) {
+  // Merge módban a kattintás kijelölést jelent, nem belépést
+  if (state.mergeMode) { toggleMergeSelect(id); return; }
+  // Slave asztalra kattintva a masterre ugrunk
+  const tid = getMasterId(id);
+  state.currentTableId = tid;
+  const t = state.tables[tid];
+  if (t.status === 'free') {
+    state.orderCart = [];
+    state.orderGuests = 2;
+    state.activeCat = 'Főétel';
+    goTo('order');
+  } else {
+    // Direct to split with empty first bill
+    state.bills = [[]];
+    state.selectedUids = new Set();
+    state.billsPaid = [];
+    state.paySelection = {};
+    state.payTips = {};
+    state.receiptsByBill = [];
+    goTo('split');
+  }
+}
+
+/* =====================================================
+   MERGE MODE (asztal-összevonás)
+   ===================================================== */
+function enterMergeMode() {
+  state.mergeMode = true;
+  state.mergeSelected = new Set();
+  render();
+}
+function exitMergeMode() {
+  state.mergeMode = false;
+  state.mergeSelected = new Set();
+  render();
+}
+function toggleMergeSelect(tid) {
+  const t = state.tables[tid];
+  if (!t) return;
+  // Csak szabad, még nem összevont asztal jelölhető ki
+  if (t.status !== 'free' || isMerged(tid)) {
+    if (isMerged(tid)) toast('Ez az asztal már egy csoport része', { type: 'error', duration: 1800 });
+    else toast('Foglalt asztalt nem lehet összevonni', { type: 'error', duration: 1800 });
+    return;
+  }
+  if (state.mergeSelected.has(tid)) state.mergeSelected.delete(tid);
+  else state.mergeSelected.add(tid);
+  render();
+}
+function confirmMerge() {
+  const ids = Array.from(state.mergeSelected).sort((a, b) => a - b);
+  if (ids.length < 2) {
+    toast('Legalább 2 asztal kell az összevonáshoz', { type: 'error' });
+    return;
+  }
+  const masterId = ids[0];
+  state.tables[masterId].mergedWith = ids;
+  state.tables[masterId].mergedInto = null;
+  for (let i = 1; i < ids.length; i++) {
+    state.tables[ids[i]].mergedInto = masterId;
+    state.tables[ids[i]].mergedWith = null;
+  }
+  state.mergeMode = false;
+  state.mergeSelected = new Set();
+  render();
+  toast(`Asztalok összevonva: ${ids.join('–')}. asztal ✓`, { type: 'success' });
+}
+function askUnmerge() {
+  state.modal = { type: 'unmerge-confirm' };
+  render();
+}
+function cancelUnmerge(e) {
+  if (e && e.target !== e.currentTarget && !e.target.closest('.modal-close')) return;
+  state.modal = null;
+  render();
+}
+function unmergeGroup() {
+  const tid = state.currentTableId;
+  const masterId = getMasterId(tid);
+  const t = state.tables[masterId];
+  if (!t || !t.mergedWith) { state.modal = null; render(); return; }
+  const members = t.mergedWith.slice();
+  for (const id of members) {
+    if (id !== masterId) {
+      state.tables[id].mergedInto = null;
+      state.tables[id].mergedWith = null;
+    }
+  }
+  t.mergedWith = null;
+  state.modal = null;
+  render();
+  toast(`Csoport feloldva — a tételek a(z) ${masterId}. asztalon maradnak`, { type: 'success' });
+}
+
+/* =====================================================
+   SCREEN: ORDER
+   ===================================================== */
+function renderOrder() {
+  const tid = state.currentTableId;
+  const cartTotal = orderCartTotal();
+  const cartCount = orderCartCount();
+
+  const catTabs = CATEGORIES.map(c =>
+    `<button class="cat-pill ${state.activeCat===c?'active':''}" onclick="setCat('${c}')">${c}</button>`
+  ).join('');
+
+  const menuItems = MENU.filter(m => m.cat === state.activeCat).map(m => {
+    const inCart = state.orderCart.find(r => r.menuId === m.id);
+    const count = inCart ? inCart.qty : 0;
+    return `
+      <button class="menu-card" onclick="addToCart('${m.id}')">
+        <div class="emoji">${m.emoji}</div>
+        <div class="name">${m.name}</div>
+        <div class="price">${fmtFt(m.price)}</div>
+        ${count > 0 ? `<div class="count-badge">${count}</div>` : ''}
+      </button>
+    `;
+  }).join('');
+
+  const cartPreview = cartCount > 0 ? `
+    <div class="cart-preview" onclick="toggleCartSheet()">
+      <div class="cart-count">${cartCount}</div>
+      <div class="cart-info">
+        <div class="lbl">Kosár</div>
+        <div class="val">${fmtFt(cartTotal)}</div>
+      </div>
+      <button class="cart-expand-btn ${state.cartSheetOpen?'open':''}" aria-label="Kosár megnyitása">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>
+      </button>
+    </div>
+  ` : '';
+
+  return `
+    <div class="screen">
+      <a class="back-link" onclick="goTo('tables')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Asztalok
+      </a>
+      <div class="screen-head">
+        <h1>${groupLabel(tid)} — <em>új rendelés</em></h1>
+        <p>${isMaster(tid) ? `🔗 Összevont csoport (${state.tables[tid].mergedWith.length} asztal). ` : ''}Válassz menüpontot a kategóriákból. A kosár alul jelenik meg.</p>
+      </div>
+      <div class="order-toolbar">
+        <div style="font-size:13px;color:var(--ink-500);font-weight:500;">Vendégszám</div>
+        <div class="guest-stepper">
+          <button class="guest-btn" onclick="changeGuests(-1)" ${state.orderGuests<=1?'disabled':''} aria-label="Kevesebb">−</button>
+          <div class="guest-val">👥 ${state.orderGuests} <small>fő</small></div>
+          <button class="guest-btn" onclick="changeGuests(1)" aria-label="Több">+</button>
+        </div>
+      </div>
+      <div class="cat-tabs">${catTabs}</div>
+      <div class="menu-grid">${menuItems}</div>
+      ${cartPreview}
+    </div>
+  `;
+}
+
+function setCat(c) {
+  state.activeCat = c;
+  // Just re-render the order screen without full state reset
+  render();
+}
+function addToCart(menuId) {
+  const existing = state.orderCart.find(r => r.menuId === menuId);
+  if (existing) existing.qty++;
+  else state.orderCart.push({ menuId, qty: 1 });
+  render();
+}
+function changeCartQty(menuId, delta) {
+  const idx = state.orderCart.findIndex(r => r.menuId === menuId);
+  if (idx < 0) return;
+  state.orderCart[idx].qty += delta;
+  if (state.orderCart[idx].qty <= 0) state.orderCart.splice(idx, 1);
+  // Close sheet if empty
+  if (state.orderCart.length === 0) state.cartSheetOpen = false;
+  render();
+}
+function changeGuests(d) {
+  state.orderGuests = Math.max(1, state.orderGuests + d);
+  render();
+}
+function toggleCartSheet() {
+  state.cartSheetOpen = !state.cartSheetOpen;
+  render();
+}
+function saveOrder() {
+  const tid = state.currentTableId;
+  if (state.orderCart.length === 0) return;
+  const t = state.tables[tid];
+  t.guests = state.orderGuests;
+  t.status = 'occupied';
+  t.openedAt = Date.now();
+  t.orderUnits = makeUnits(state.orderCart.map(r => [r.menuId, r.qty]));
+  state.orderCart = [];
+  state.cartSheetOpen = false;
+  toast(`Rendelés rögzítve — ${t.orderUnits.length} tétel, ${fmtFt(tableTotal(tid))}`, { type:'success' });
+  state.bills = [[]];
+  state.selectedUids = new Set();
+  state.billsPaid = [];
+  state.paySelection = {};
+  state.payTips = {};
+  state.receiptsByBill = [];
+  goTo('split');
+}
+
+/* =====================================================
+   SCREEN: SPLIT — TAP-TO-ASSIGN PRIMARY UX
+   ===================================================== */
+function renderSplit() {
+  const tid = state.currentTableId;
+  const t = state.tables[tid];
+  const allUnits = t.orderUnits;
+
+  // Determine assigned vs unassigned
+  const assignedSet = new Set();
+  state.bills.forEach(b => b.forEach(uid => assignedSet.add(uid)));
+  const unassigned = allUnits.filter(u => !assignedSet.has(u.uid));
+  const unassignedTotal = unassigned.reduce((s,u) => s + menuOf(u.menuId).price, 0);
+  const total = tableTotal(tid);
+
+  const renderDish = (u) => {
+    const m = menuOf(u.menuId);
+    const isSel = state.selectedUids.has(u.uid);
+    return `
+      <div class="dish ${isSel?'selected':''}" data-uid="${u.uid}">
+        <div class="em">${m.emoji}</div>
+        <div class="nm">${m.name}</div>
+        <div class="pr">${fmtFt(m.price)}</div>
+      </div>
+    `;
+  };
+
+  const hasSelection = state.selectedUids.size > 0;
+  const selectionBar = hasSelection ? `
+    <div class="selection-bar">
+      <div class="info">
+        <div class="num">${state.selectedUids.size}</div>
+        <span>Koppints egy számlára a hozzárendeléshez</span>
+      </div>
+      <button class="clear-btn" onclick="clearSelection()">Mégse</button>
+    </div>
+  ` : '';
+
+  const poolBin = `
+    <div class="bin bin-pool ${hasSelection?'':'target-active-no'}" data-dropzone="pool">
+      <div class="bin-header">
+        <div class="bin-title"><span class="marker"></span>Szétosztatlan</div>
+        <div class="bin-actions">
+          <span class="bin-count">${unassigned.length} db</span>
+        </div>
+      </div>
+      <div class="bin-items">
+        ${unassigned.length === 0
+          ? `<div class="bin-empty">Minden tétel szét van osztva ✓</div>`
+          : unassigned.map(renderDish).join('')}
+      </div>
+      <div class="bin-footer">
+        <span class="lbl">Részösszeg</span>
+        <span class="val">${fmtFt(unassignedTotal)}</span>
+      </div>
+    </div>
+  `;
+
+  const billBins = state.bills.map((uids, idx) => {
+    const colorIdx = idx % BILL_COLORS.length;
+    const units = allUnits.filter(u => uids.includes(u.uid));
+    const tot = billTotal(uids);
+    const canDel = state.bills.length > 1;
+    const targetClass = hasSelection ? 'target-active' : '';
+    return `
+      <div class="bin bin-bill ${targetClass}" data-dropzone="bill" data-bill-idx="${idx}" data-color="${colorIdx}">
+        <div class="bin-header">
+          <div class="bin-title"><span class="marker"></span>${idx+1}. Számla</div>
+          <div class="bin-actions">
+            <span class="bin-count">${units.length} db</span>
+            ${canDel ? `<button class="bin-del" onclick="event.stopPropagation();removeBill(${idx})" aria-label="Számla törlése">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+            </button>` : ''}
+          </div>
+        </div>
+        <div class="bin-items">
+          ${units.length === 0
+            ? `<div class="bin-empty">Üres számla — koppints ide a kijelölt tételek hozzárendeléséhez</div>`
+            : units.map(renderDish).join('')}
+        </div>
+        <div class="bin-footer">
+          <span class="lbl">Részösszeg</span>
+          <span class="val">${fmtFt(tot)}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  const addBtn = state.bills.length < 4 ? `
+    <button class="add-bill-btn" onclick="addBill()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      Új számla hozzáadása
+    </button>
+  ` : '';
+
+  return `
+    <div class="screen">
+      <a class="back-link" onclick="leaveSplit()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Asztalok
+      </a>
+      <div class="screen-head">
+        <h1>${groupLabel(tid)} — <em>számla szétosztás</em></h1>
+        <p>Koppints egy tételre a kijelöléshez, majd egy számlára a hozzárendeléshez.</p>
+      </div>
+      ${isMaster(tid) ? `
+        <div class="group-info-bar">
+          <div class="gi-text">
+            <span class="gi-ico">🔗</span>
+            <span>Összevont csoport: <strong>${state.tables[tid].mergedWith.join('–')}. asztal</strong> (${state.tables[tid].mergedWith.length} asztal)</span>
+          </div>
+          <button class="gi-unmerge" onclick="askUnmerge()">Csoport feloldása</button>
+        </div>
+      ` : ''}
+      ${selectionBar}
+      <div class="split-summary">
+        <div class="stat">Összeg: <strong>${fmtFt(total)}</strong></div>
+        <div class="stat ${unassigned.length===0?'ok':'warn'}">Szétosztatlan: <strong>${unassigned.length} db</strong></div>
+        <div class="stat">Számlák: <strong>${state.bills.length} db</strong></div>
+      </div>
+      ${renderSplitQuickActions(t, unassigned, allUnits)}
+      <div class="bills-container">
+        ${poolBin}
+        ${billBins}
+        ${addBtn}
+      </div>
+      <div class="split-tip">
+        <strong>💡 Tipp:</strong> egyszerre több tételt is kijelölhetsz egymás után, majd egyetlen koppintással mindet a számlára teszed. A fenti <strong>gyors gombok</strong> egy mozdulattal szétosztják a tételeket — ezután kézzel finomíthatsz. Asztali gépen tartsd lenyomva egy tételt és húzd át a számlára.
+      </div>
+    </div>
+  `;
+}
+
+function renderSplitQuickActions(t, unassigned, allUnits) {
+  const n = t.guests || 1;
+  const totalUnits = allUnits.length;
+  const drinkUnitsAll = allUnits.filter(u => menuOf(u.menuId).cat === 'Ital');
+  // A "gyors gombok" akkor használhatók, ha még van mit szétosztani vagy
+  // ha még csak az 1. üres számlában vagyunk (= alaphelyzet)
+  const splitAllDisabled = n < 2 || totalUnits === 0;
+  const splitDrinksDisabled = n < 2 || drinkUnitsAll.length === 0;
+  return `
+    <div class="split-quick-actions">
+      <div class="qa-label">
+        Gyors szétosztás
+        <span class="badge">${n} fő</span>
+      </div>
+      <div class="qa-buttons">
+        <button class="qa-btn" onclick="autoSplitEqual()" ${splitAllDisabled?'disabled':''} title="Minden tételt egyenletesen szétoszt ${n} számlára">
+          <span class="ico">⚖️</span>
+          Egyenlő részekre
+          <small>${n} számla, ~azonos összeg</small>
+        </button>
+        <button class="qa-btn" onclick="autoSplitDrinks()" ${splitDrinksDisabled?'disabled':''} title="Csak az italokat osztja szét ${n} számlára">
+          <span class="ico">🥤</span>
+          Italok megosztva
+          <small>${drinkUnitsAll.length} ital, ${n} fő között</small>
+        </button>
+      </div>
+    </div>
+  `;
+}
+
+function bindSplitInteractions() {
+  const root = $('#screen-root');
+  // Click on a dish — toggle selection (unless we just finished a drag)
+  root.querySelectorAll('.dish').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      // Suppress click if drag just happened
+      if (window._splitJustDragged) {
+        window._splitJustDragged = false;
+        return;
+      }
+      const uid = el.dataset.uid;
+      if (state.selectedUids.has(uid)) {
+        state.selectedUids.delete(uid);
+      } else {
+        state.selectedUids.add(uid);
+      }
+      render();
+    });
+
+    // Drag (long-press on touch, 12px on mouse)
+    el.addEventListener('pointerdown', onDragStart);
+  });
+
+  // Click on a bin background (when there's a selection) — assign
+  root.querySelectorAll('[data-dropzone]').forEach(bin => {
+    bin.addEventListener('click', (e) => {
+      // Ignore if click was inside a dish (handled above) or button
+      if (e.target.closest('.dish')) return;
+      if (e.target.closest('button')) return;
+      // Suppress if drag just happened
+      if (window._splitJustDragged) {
+        window._splitJustDragged = false;
+        return;
+      }
+      if (state.selectedUids.size === 0) return;
+      const zone = bin.dataset.dropzone;
+      if (zone === 'pool') {
+        moveSelectedToPool();
+      } else if (zone === 'bill') {
+        const idx = parseInt(bin.dataset.billIdx, 10);
+        moveSelectedToBill(idx);
+      }
+    });
+  });
+}
+
+function clearSelection() {
+  state.selectedUids = new Set();
+  render();
+}
+
+function moveSelectedToBill(billIdx) {
+  if (state.selectedUids.size === 0) return;
+  // Remove these uids from any other bill
+  state.bills.forEach(b => {
+    for (const uid of state.selectedUids) {
+      const i = b.indexOf(uid);
+      if (i >= 0) b.splice(i, 1);
+    }
+  });
+  // Add to target
+  for (const uid of state.selectedUids) {
+    if (!state.bills[billIdx].includes(uid)) {
+      state.bills[billIdx].push(uid);
+    }
+  }
+  const count = state.selectedUids.size;
+  state.selectedUids = new Set();
+  render();
+  toast(`${count} tétel → ${billIdx+1}. számla`, { type:'success', duration: 1500 });
+}
+
+function moveSelectedToPool() {
+  if (state.selectedUids.size === 0) return;
+  state.bills.forEach(b => {
+    for (const uid of state.selectedUids) {
+      const i = b.indexOf(uid);
+      if (i >= 0) b.splice(i, 1);
+    }
+  });
+  const count = state.selectedUids.size;
+  state.selectedUids = new Set();
+  render();
+  toast(`${count} tétel vissza a szétosztatlan közé`, { type:'info', duration: 1500 });
+}
+
+function addBill() {
+  if (state.bills.length >= 4) return;
+  state.bills.push([]);
+  render();
+}
+function removeBill(idx) {
+  if (state.bills.length <= 1) return;
+  const removed = state.bills.splice(idx, 1)[0];
+  if (removed.length > 0) {
+    toast(`Számla törölve — ${removed.length} tétel visszakerült`, { type:'info' });
+  }
+  render();
+}
+function leaveSplit() {
+  state.selectedUids = new Set();
+  state.bills = [];
+  goTo('tables');
+}
+
+/* =====================================================
+   AUTO-SPLIT — gyors gombok
+   ===================================================== */
+
+/* Minden tételt szétoszt N számlára úgy, hogy az összegek minél
+   közelebb legyenek egymáshoz. Longest-Processing-Time (LPT) heurisztika:
+   ár szerint csökkenő sorrendben mindig a pillanatnyilag legolcsóbb
+   számlára tesszük a következő tételt. */
+function autoSplitEqual() {
+  const tid = state.currentTableId;
+  const t = state.tables[tid];
+  if (!t) return;
+  const n = t.guests || 1;
+  if (n < 2) {
+    toast('Legalább 2 fő szükséges', { type: 'error' });
+    return;
+  }
+  if (t.orderUnits.length === 0) {
+    toast('Nincs szétosztható tétel', { type: 'error' });
+    return;
+  }
+  // N db üres számla
+  const newBills = Array.from({ length: n }, () => []);
+  const newTotals = Array(n).fill(0);
+
+  // Ár szerint csökkenő sorrend (LPT) — drága tételek mehetnek először
+  const sorted = t.orderUnits
+    .slice()
+    .sort((a, b) => menuOf(b.menuId).price - menuOf(a.menuId).price);
+
+  for (const u of sorted) {
+    // Legolcsóbb számlára tesszük (egyenlő esetben az alacsonyabb indexre)
+    let minIdx = 0;
+    for (let i = 1; i < n; i++) {
+      if (newTotals[i] < newTotals[minIdx]) minIdx = i;
+    }
+    newBills[minIdx].push(u.uid);
+    newTotals[minIdx] += menuOf(u.menuId).price;
+  }
+
+  state.bills = newBills;
+  state.selectedUids = new Set();
+  state.billsPaid = [];
+  state.paySelection = {};
+  state.payTips = {};
+  state.receiptsByBill = [];
+
+  const min = Math.min(...newTotals);
+  const max = Math.max(...newTotals);
+  const diff = max - min;
+  render();
+  toast(`Egyenlő szétosztás ✓ ${n} számla, eltérés: ${fmtFt(diff)}`, { type:'success' });
+}
+
+/* Csak az italokat osztja szét N számlára, körkörösen.
+   Ha még nincs elég számla, kibővíti N-re (max 4).
+   A nem-italok érintetlenek maradnak (ott, ahol most vannak). */
+function autoSplitDrinks() {
+  const tid = state.currentTableId;
+  const t = state.tables[tid];
+  if (!t) return;
+  const n = t.guests || 1;
+  if (n < 2) {
+    toast('Legalább 2 fő szükséges', { type: 'error' });
+    return;
+  }
+  const drinkUids = t.orderUnits
+    .filter(u => menuOf(u.menuId).cat === 'Ital')
+    .map(u => u.uid);
+
+  if (drinkUids.length === 0) {
+    toast('Nincs ital a rendelésben', { type: 'error' });
+    return;
+  }
+
+  // A célszámlák száma legfeljebb 4 lehet (UX/szín-korlát)
+  const targetBills = Math.min(n, 4);
+  if (n > 4) {
+    toast(`${n} fő > 4 (max számla), ${targetBills} számlára osztva`, { duration: 3000 });
+  }
+
+  // Biztosítjuk, hogy legalább targetBills üres/meglévő számla van
+  while (state.bills.length < targetBills) state.bills.push([]);
+
+  // Eltávolítjuk az italokat minden számláról és a poolból (a uids már nem szerepelnek sehol)
+  state.bills.forEach(b => {
+    for (let i = b.length - 1; i >= 0; i--) {
+      if (drinkUids.includes(b[i])) b.splice(i, 1);
+    }
+  });
+
+  // Ár szerint csökkenő sorrendben round-robin a legolcsóbb számlára (LPT az italokra)
+  const drinkUnitsSorted = drinkUids
+    .map(uid => t.orderUnits.find(u => u.uid === uid))
+    .sort((a, b) => menuOf(b.menuId).price - menuOf(a.menuId).price);
+
+  // Csak a célszámlákra (0..targetBills-1) osztjuk, az ott levő nem-ital
+  // tételeket is figyelembe véve a "legkevesebb ital összeg" számításhoz.
+  const drinkTotals = Array(targetBills).fill(0);
+  for (const u of drinkUnitsSorted) {
+    let minIdx = 0;
+    for (let i = 1; i < targetBills; i++) {
+      if (drinkTotals[i] < drinkTotals[minIdx]) minIdx = i;
+    }
+    state.bills[minIdx].push(u.uid);
+    drinkTotals[minIdx] += menuOf(u.menuId).price;
+  }
+
+  state.selectedUids = new Set();
+  render();
+  const perBill = Math.round(drinkTotals.reduce((s,v)=>s+v,0) / targetBills);
+  toast(`Italok szétosztva ✓ ${drinkUids.length} ital · ${targetBills} fő (~${fmtFt(perBill)}/fő)`, { type:'success' });
+}
+
+/* =====================================================
+   DRAG & DROP — long-press based (preserves scroll)
+   ===================================================== */
+let drag = null;
+let dragHoverBin = null;
+const LONG_PRESS_MS = 380;  // hold this long to start drag
+const SCROLL_CANCEL_PX = 10; // if user moves more than this before long-press fires, treat as scroll
+
+function clearDragGhost() {
+  if (drag) {
+    if (drag.longPressTimer) {
+      clearTimeout(drag.longPressTimer);
+      drag.longPressTimer = null;
+    }
+    if (drag.ghost) drag.ghost.remove();
+    if (drag.el) {
+      drag.el.classList.remove('dragging');
+      drag.el.classList.remove('long-pressing');
+    }
+    drag = null;
+  }
+  if (dragHoverBin) {
+    dragHoverBin.classList.remove('drop-hover');
+    dragHoverBin = null;
+  }
+}
+
+function onDragStart(e) {
+  // Only main button on mouse
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+
+  const el = e.currentTarget;
+  const uid = el.dataset.uid;
+  const startX = e.clientX;
+  const startY = e.clientY;
+  const pointerId = e.pointerId;
+  const isTouch = e.pointerType === 'touch';
+
+  // Long-press detection
+  let dragStarted = false;
+  let cancelled = false;
+  let ghost = null;
+
+  const dragState = {
+    uid, el, pointerId,
+    ghost: null,
+    offsetX: 0,
+    offsetY: 0,
+    longPressTimer: null,
+    isTouch,
+  };
+  drag = dragState;
+
+  // Visual feedback during long-press wait
+  el.classList.add('long-pressing');
+
+  const startDrag = () => {
+    if (cancelled) return;
+    dragStarted = true;
+
+    // Provide haptic feedback if available
+    if (navigator.vibrate) {
+      try { navigator.vibrate(15); } catch (_) {}
+    }
+
+    el.classList.remove('long-pressing');
+    el.classList.add('dragging');
+
+    // Create ghost element
+    const rect = el.getBoundingClientRect();
+    const unit = state.tables[state.currentTableId].orderUnits.find(u => u.uid === uid);
+    if (!unit) return;
+    const m = menuOf(unit.menuId);
+    ghost = document.createElement('div');
+    ghost.className = 'drag-ghost';
+    ghost.style.width = rect.width + 'px';
+    ghost.style.left = rect.left + 'px';
+    ghost.style.top = rect.top + 'px';
+    ghost.innerHTML = `
+      <div class="em" style="font-size:22px;">${m.emoji}</div>
+      <div class="nm" style="font-weight:600;color:var(--ink-900);">${m.name}</div>
+      <div class="pr" style="font-family:var(--font-mono);font-weight:600;color:var(--teal-700);font-size:13px;">${fmtFt(m.price)}</div>
+    `;
+    document.body.appendChild(ghost);
+    dragState.ghost = ghost;
+    dragState.offsetX = startX - rect.left;
+    dragState.offsetY = startY - rect.top;
+  };
+
+  // Schedule long-press
+  dragState.longPressTimer = setTimeout(startDrag, LONG_PRESS_MS);
+
+  const onMove = (ev) => {
+    const dx = ev.clientX - startX;
+    const dy = ev.clientY - startY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+
+    // If touch: any movement before long-press = scrolling, cancel drag
+    if (!dragStarted && isTouch && dist > SCROLL_CANCEL_PX) {
+      cancelDrag();
+      return;
+    }
+    // For mouse: small movement is OK, we trigger drag if 12+px (still useful for desktop)
+    if (!dragStarted && !isTouch && dist > 12) {
+      // Cancel long-press timer and start drag immediately
+      clearTimeout(dragState.longPressTimer);
+      startDrag();
+    }
+
+    // Update ghost position
+    if (dragStarted && ghost) {
+      ev.preventDefault();
+      ghost.style.left = (ev.clientX - dragState.offsetX) + 'px';
+      ghost.style.top  = (ev.clientY - dragState.offsetY) + 'px';
+
+      // Find hover bin
+      ghost.style.display = 'none';
+      const under = document.elementFromPoint(ev.clientX, ev.clientY);
+      ghost.style.display = '';
+      const bin = under ? under.closest('[data-dropzone]') : null;
+
+      if (bin !== dragHoverBin) {
+        if (dragHoverBin) dragHoverBin.classList.remove('drop-hover');
+        dragHoverBin = bin;
+        if (dragHoverBin) dragHoverBin.classList.add('drop-hover');
+      }
+    }
+  };
+
+  const onUp = (ev) => {
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', cancelDrag);
+
+    if (cancelled) return;
+
+    // Cancel long-press timer if still pending
+    if (dragState.longPressTimer) {
+      clearTimeout(dragState.longPressTimer);
+      dragState.longPressTimer = null;
+    }
+
+    if (dragStarted) {
+      window._splitJustDragged = true;
+      // Process drop
+      if (ghost) {
+        ghost.style.display = 'none';
+        const under = document.elementFromPoint(ev.clientX, ev.clientY);
+        ghost.style.display = '';
+        const bin = under ? under.closest('[data-dropzone]') : null;
+        if (bin) {
+          const zone = bin.dataset.dropzone;
+          if (zone === 'bill') {
+            const billIdx = parseInt(bin.dataset.billIdx, 10);
+            state.selectedUids.add(uid);
+            moveSelectedToBill(billIdx);
+            return;
+          } else if (zone === 'pool') {
+            state.selectedUids.add(uid);
+            moveSelectedToPool();
+            return;
+          }
+        }
+      }
+      clearDragGhost();
+      render();
+    } else {
+      // Tap — let click handler take it (don't preventDefault)
+      el.classList.remove('long-pressing');
+      drag = null;
+    }
+  };
+
+  const cancelDrag = () => {
+    cancelled = true;
+    document.removeEventListener('pointermove', onMove);
+    document.removeEventListener('pointerup', onUp);
+    document.removeEventListener('pointercancel', cancelDrag);
+    clearDragGhost();
+  };
+
+  document.addEventListener('pointermove', onMove);
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', cancelDrag);
+}
+
+/* =====================================================
+   SCREEN: PAYMENT
+   ===================================================== */
+function renderPayment() {
+  const tid = state.currentTableId;
+  const t = state.tables[tid];
+
+  const cards = state.bills.map((uids, idx) => {
+    const colorIdx = idx % BILL_COLORS.length;
+    const subtotal = billTotal(uids);
+    const tipPct = billTipPercent(idx);
+    const tipAmt = billTipAmount(idx);
+    const grandTotal = subtotal + tipAmt;
+    const paid = state.billsPaid[idx];
+    const sel = state.paySelection[idx];
+
+    // Kategóriánként csoportosított rendelési összesítő
+    const grouped = groupUidsByCategory(uids);
+    let itemsHTML = '';
+    if (grouped.length === 0) {
+      itemsHTML = `<div class="row"><span>Üres számla</span></div>`;
+    } else {
+      itemsHTML = grouped.map(g => {
+        const meta = CATEGORY_META[g.cat];
+        const rows = g.items.map(it =>
+          `<div class="row"><span>${it.menu.emoji} ${it.menu.name} × ${it.qty}</span><span class="mono">${fmtFt(it.subtotal)}</span></div>`
+        ).join('');
+        return `<div class="cat-head"><span class="ico">${meta.icon}</span>${meta.label}</div>${rows}`;
+      }).join('');
+    }
+
+    const methodsHTML = PAYMENT_METHODS.map(pm => {
+      const isSel = sel === pm.id;
+      return `<button class="pm-btn ${isSel?'selected':''}" ${paid?'disabled':''} onclick="selectPayMethod(${idx},'${pm.id}')">
+        <span class="ico">${pm.emoji}</span>${pm.label}
+      </button>`;
+    }).join('');
+
+    // Borravaló választó
+    const tipBtns = TIP_OPTIONS.map(p => {
+      const isSel = tipPct === p;
+      const label = p === 0 ? 'Nincs' : `${p}%`;
+      return `<button class="tip-btn ${isSel?'selected':''}" ${paid?'disabled':''} onclick="selectTip(${idx}, ${p})">${label}</button>`;
+    }).join('');
+    const tipSelectorHTML = uids.length === 0 ? '' : `
+      <div class="tip-selector">
+        <div class="tip-label">
+          <span>Borravaló</span>
+          <span class="amt">${tipPct > 0 ? `+ ${fmtFt(tipAmt)}` : '—'}</span>
+        </div>
+        <div class="tip-options">${tipBtns}</div>
+      </div>
+    `;
+
+    // Részletes összesítő — csak akkor mutatjuk, ha van borravaló (másképp redundáns)
+    const breakdownHTML = uids.length === 0 ? '' : `
+      <div class="pay-breakdown">
+        <div class="row"><span>Részösszeg</span><span class="mono">${fmtFt(subtotal)}</span></div>
+        ${tipPct > 0 ? `<div class="row tip-row"><span>Borravaló (${tipPct}%)</span><span class="mono">+ ${fmtFt(tipAmt)}</span></div>` : ''}
+        <div class="row grand"><span>Fizetendő</span><span class="mono">${fmtFt(grandTotal)}</span></div>
+      </div>
+    `;
+
+    let statusHTML;
+    if (paid) {
+      statusHTML = `
+        <div class="pay-status done">
+          <span class="ico">✓</span>Fizetve · ${paid.method}
+        </div>
+        <button class="btn btn-ghost btn-sm" style="width:100%;" onclick="openReceipt(${idx})">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+          Nyugta megtekintése
+        </button>
+      `;
+    } else if (sel) {
+      const actionLabel = sel === 'qr' ? `QR-kód generálása · ${fmtFt(grandTotal)}` : `Fizetés rögzítése · ${fmtFt(grandTotal)}`;
+      statusHTML = `<button class="btn btn-primary btn-block" onclick="confirmPay(${idx})">${actionLabel}</button>`;
+    } else {
+      statusHTML = `<div class="pay-status pending">Válassz fizetési módot</div>`;
+    }
+
+    return `
+      <div class="pay-card ${paid?'paid':''}" data-color="${colorIdx}">
+        <div class="pay-head">
+          <h3><span class="marker"></span>${idx+1}. Számla</h3>
+          <div class="pay-amount">${fmtFt(grandTotal)}</div>
+        </div>
+        <div class="pay-items-summary">${itemsHTML}</div>
+        ${tipSelectorHTML}
+        ${breakdownHTML}
+        <div class="pm-grid">${methodsHTML}</div>
+        ${statusHTML}
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="screen">
+      <a class="back-link" onclick="goTo('split')">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        Számla szétosztás
+      </a>
+      <div class="screen-head">
+        <h1>${groupLabel(tid)} — <em>fizetés</em></h1>
+        <p>Minden számla saját fizetési móddal zárható. Kártya, készpénz vagy QR-kód a vendég telefonján.</p>
+      </div>
+      <div class="pay-list">${cards}</div>
+    </div>
+  `;
+}
+
+function selectPayMethod(idx, methodId) {
+  state.paySelection[idx] = methodId;
+  render();
+}
+
+function selectTip(idx, pct) {
+  if (state.billsPaid[idx]) return; // zárolt
+  // Ha újra rákattint ugyanarra (és nem 0%), kapcsolja ki
+  const cur = state.payTips[idx] || 0;
+  state.payTips[idx] = (cur === pct && pct !== 0) ? 0 : pct;
+  render();
+}
+
+function confirmPay(idx) {
+  const methodId = state.paySelection[idx];
+  if (!methodId) return;
+  const method = PAYMENT_METHODS.find(p => p.id === methodId);
+  const amount = billGrandTotal(idx);  // borravalóval együtt
+
+  if (methodId === 'qr') {
+    // Open QR modal
+    state.modal = {
+      type: 'qr',
+      billIdx: idx,
+      amount,
+      ref: genRef(idx),
+    };
+    render();
+  } else {
+    // Direct confirm
+    finalizePayment(idx, method.label, methodId);
+  }
+}
+
+function finalizePayment(idx, methodLabel, methodId) {
+  const subtotal = billTotal(state.bills[idx]);
+  const tipPct = billTipPercent(idx);
+  const tipAmt = billTipAmount(idx);
+  const amount = subtotal + tipAmt;
+  state.billsPaid[idx] = {
+    method: methodLabel,
+    methodId,
+    amount,         // teljes fizetett összeg (borravalóval)
+    subtotal,
+    tipPct,
+    tipAmt,
+    time: nowTime(),
+    ref: genRef(idx),
+  };
+  // Build receipt data
+  buildReceiptData(idx);
+  const tipPart = tipPct > 0 ? ` (+${tipPct}% borravaló)` : '';
+  toast(`${idx+1}. számla fizetve — ${methodLabel}${tipPart}`, { type:'success' });
+  state.modal = null;
+  render();
+}
+
+function buildReceiptData(idx) {
+  const tid = state.currentTableId;
+  const t = state.tables[tid];
+  const uids = state.bills[idx];
+
+  // Kategóriánként csoportosítva
+  const grouped = groupUidsByCategory(uids);
+
+  const subtotal = grouped.reduce((s, g) => s + g.catSubtotal, 0);
+  const tipPct = billTipPercent(idx);
+  const tipAmt = billTipAmount(idx);
+  const grandTotal = subtotal + tipAmt;
+  // ÁFA-számítás csak a részösszegre (a borravaló nem ÁFA-köteles)
+  const vat = Math.round(subtotal * 0.27 / 1.27); // 27% VAT included
+  const net = subtotal - vat;
+
+  const paid = state.billsPaid[idx];
+
+  state.receiptsByBill[idx] = {
+    tableId: tid,
+    billIdx: idx,
+    grouped,       // [{cat, items, catSubtotal}]
+    subtotal,
+    tipPct,
+    tipAmt,
+    grandTotal,
+    vat,
+    net,
+    method: paid.method,
+    methodId: paid.methodId,
+    time: paid.time,
+    date: new Date().toLocaleDateString('hu-HU'),
+    ref: paid.ref,
+    guests: t.guests,
+  };
+}
+
+function openReceipt(idx) {
+  state.modal = { type: 'receipt', billIdx: idx };
+  render();
+}
+
+/* =====================================================
+   QR + RECEIPT MODALS
+   ===================================================== */
+function renderModal() {
+  // Cart sheet has priority when open
+  if (state.cartSheetOpen && state.screen === 'order' && !state.modal) {
+    renderCartSheetIfNeeded();
+    return;
+  }
+
+  const root = $('#modal-root');
+  const m = state.modal;
+  if (!m) { root.innerHTML = ''; return; }
+
+  if (m.type === 'welcome') {
+    root.innerHTML = renderWelcomeModal();
+    return;
+  }
+  if (m.type === 'qr') {
+    root.innerHTML = renderQRModal(m);
+    // Generate the QR
+    setTimeout(() => generateQR(m), 30);
+    return;
+  }
+  if (m.type === 'receipt') {
+    root.innerHTML = renderReceiptModal(m);
+    return;
+  }
+  if (m.type === 'reset-confirm') {
+    root.innerHTML = renderResetConfirm();
+    return;
+  }
+  if (m.type === 'unmerge-confirm') {
+    root.innerHTML = renderUnmergeConfirm();
+    return;
+  }
+}
+
+function renderUnmergeConfirm() {
+  const tid = state.currentTableId;
+  const t = state.tables[tid];
+  if (!t || !t.mergedWith) return '';
+  const members = t.mergedWith;
+  const others = members.filter(id => id !== tid);
+  return `
+    <div class="modal-overlay" onclick="cancelUnmerge(event)">
+      <div class="modal" style="max-width:400px;" onclick="event.stopPropagation()">
+        <div class="modal-head">
+          <h2>Csoport <em>feloldása</em></h2>
+          <button class="modal-close" onclick="cancelUnmerge()" aria-label="Bezárás">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>A(z) <strong>${members.join('–')}. asztal</strong> csoportját feloldod.</p>
+          <p style="font-size:13px;color:var(--ink-500);">A meglévő rendelés és a már szétosztott számlák a(z) <strong>${tid}. asztalon</strong> maradnak. A többi asztal (${others.join(', ')}.) <strong>azonnal szabaddá válik</strong>, és új vendég foglalhatja le.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="cancelUnmerge()">Mégse</button>
+          <button class="btn btn-primary" onclick="unmergeGroup()">Igen, feloldom</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function renderWelcomeModal() {
+  return `
+    <div class="modal-overlay" onclick="closeWelcome(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-head">
+          <h2>Üdv a Split<em>Easy</em> demóban</h2>
+        </div>
+        <div class="welcome-body">
+          <h3>Pincér felület — <em>élő bemutató</em></h3>
+          <p>Így dolgozik egy pincér az asztal érkezésétől a fizetésig.</p>
+          <div class="welcome-steps">
+            <div class="welcome-step"><div class="n">1</div><div class="txt"><strong>Asztal kiválasztása.</strong> A 3., 5., 6. asztalon már nyitott rendelés van. Több asztalt is összevonhatsz a <strong>🔗 gombbal</strong> — nagy társaságoknak.</div></div>
+            <div class="welcome-step"><div class="n">2</div><div class="txt"><strong>Tap-to-assign:</strong> koppints egy tételre (kijelölés), majd egy számlára (hozzárendelés). <strong>Gyors gombok:</strong> egyenlő szétdobás vagy italok megosztása.</div></div>
+            <div class="welcome-step"><div class="n">3</div><div class="txt"><strong>Borravaló + fizetés.</strong> 5/10/15% borravaló opció, QR-kódos fizetés, PDF nyugta.</div></div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-primary" onclick="closeWelcome()">Kezdjük →</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function closeWelcome(e) {
+  if (e && e.target !== e.currentTarget) return;
+  state.modal = null;
+  welcomeShown = true;
+  render();
+}
+
+function renderQRModal(m) {
+  const billNo = m.billIdx + 1;
+  return `
+    <div class="modal-overlay" onclick="cancelQR(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-head">
+          <h2>qvik <em>QR-fizetés</em></h2>
+          <button class="modal-close" onclick="cancelQR()" aria-label="Bezárás">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="qr-modal-body">
+          <div class="qr-amount">${fmtFt(m.amount)}</div>
+          <div class="qr-bill-label">${billNo}. számla · ${state.currentTableId}. asztal · ${m.ref}</div>
+          <div class="qr-code-wrap">
+            <div id="qrcode-target"></div>
+            <div class="qr-scan-anim"><div class="qr-scan-line"></div></div>
+          </div>
+          <div class="qvik-badge">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            <span>MNB qvik · azonnali utalás</span>
+          </div>
+          <div class="qr-helper">A vendég a <strong>banki app QR-olvasójával</strong> beolvassa — az összeg, kedvezményezett és közlemény automatikusan kitöltődik. Másodperceken belül megérkezik a pénz.</div>
+          <button class="btn btn-primary btn-block" onclick="simulateQRPayment(${m.billIdx})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            Beérkezett fizetés visszaigazolása
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function cancelQR(e) {
+  if (e && e.target !== e.currentTarget && !e.target.closest('.modal-close')) return;
+  state.modal = null;
+  render();
+}
+function simulateQRPayment(idx) {
+  finalizePayment(idx, 'QR-kód', 'qr');
+}
+function generateQR(m) {
+  const target = document.getElementById('qrcode-target');
+  if (!target) return;
+  target.innerHTML = '';
+
+  // MNB QVIK HCT (Hungarian Credit Transfer) szabványos QR-kód
+  // 17 mező LF (\n) elválasztással, a sorrend rögzített
+  // Forrás: MNB QR-kód útmutató (qr-kod-utmutato-20190712-en.pdf)
+  const ref = m.ref;
+  const tid = state.currentTableId;
+  const billNo = m.billIdx + 1;
+
+  // Az étterem adatai (demó értékek)
+  const RESTAURANT = {
+    name: 'SplitEasy Demo Restaurant',
+    iban: 'HU42117730161111101800000000',  // demó IBAN — valós telepítésnél az étteremé
+    bic:  'OTPVHUHB',
+  };
+
+  // Esedékesség: aznapra
+  const due = new Date();
+  const yyyy = due.getFullYear();
+  const mm = String(due.getMonth() + 1).padStart(2, '0');
+  const dd = String(due.getDate()).padStart(2, '0');
+  const dueDate = `${yyyy}${mm}${dd}`;  // YYYYMMDD
+
+  // QVIK HCT mezők (17 db):
+  // 1: ID code (HCT = credit transfer order)
+  // 2: Version (001)
+  // 3: Character set (1 = UTF-8)
+  // 4: BIC of beneficiary
+  // 5: Beneficiary name
+  // 6: Beneficiary IBAN
+  // 7: Amount (HUF + összeg, pl. HUF14250)
+  // 8: Due date (YYYYMMDD)
+  // 9: Payment situation identifier (üres = általános vásárlás)
+  // 10: Remittance info (közlemény, max 70 char)
+  // 11: Shop ID
+  // 12: Merchant device ID
+  // 13: Receipt ID
+  // 14: Customer ID (üres)
+  // 15: Payee internal transaction ID
+  // 16: Loyalty ID (üres)
+  // 17: NAV verification code (üres)
+
+  const remittance = `${tid}. asztal / ${billNo}. szamla / ${ref}`.substring(0, 70);
+  const fields = [
+    'HCT',                                  // 1
+    '001',                                  // 2
+    '1',                                    // 3 UTF-8
+    RESTAURANT.bic,                         // 4
+    RESTAURANT.name,                        // 5
+    RESTAURANT.iban,                        // 6
+    `HUF${m.amount}`,                       // 7
+    dueDate,                                // 8
+    '',                                     // 9
+    remittance,                             // 10
+    'SPLITEASY-DEMO',                       // 11 Shop ID
+    `T${tid}-POS`,                          // 12 Merchant device ID
+    ref,                                    // 13 Receipt ID
+    '',                                     // 14
+    `SE-${ref}`,                            // 15
+    '',                                     // 16
+    ''                                      // 17
+  ];
+
+  // Mezők LF-fel elválasztva, az utolsó után is LF
+  const payload = fields.join('\n') + '\n';
+
+  try {
+    new QRCode(target, {
+      text: payload,
+      width: 220,
+      height: 220,
+      colorDark: '#0F172A',
+      colorLight: '#FFFFFF',
+      correctLevel: QRCode.CorrectLevel.M,
+    });
+  } catch (err) {
+    console.error('QR error:', err);
+    target.innerHTML = '<div style="padding:40px;color:#999;">QR betöltése sikertelen</div>';
+  }
+}
+
+function renderReceiptModal(m) {
+  const r = state.receiptsByBill[m.billIdx];
+  if (!r) return '';
+
+  // Kategorizált tételek (legacy nyugtáknál ha nincs `grouped`, esik vissza
+  // egy egyszerű listára)
+  let itemsHTML = '';
+  if (r.grouped && r.grouped.length) {
+    itemsHTML = r.grouped.map(g => {
+      const meta = CATEGORY_META[g.cat];
+      const rows = g.items.map(it => `
+        <div class="receipt-item">
+          <div class="receipt-item-name">
+            <span class="nm">${it.menu.emoji} ${it.menu.name}</span>
+            <span class="total">${fmtFt(it.subtotal)}</span>
+          </div>
+          <div class="receipt-item-detail">
+            <span>${it.qty} × ${fmtFt(it.menu.price)}</span>
+          </div>
+        </div>
+      `).join('');
+      return `<div class="receipt-cat-head">${meta.icon} ${meta.label}</div>${rows}`;
+    }).join('');
+  } else if (r.items) {
+    itemsHTML = r.items.map(it => `
+      <div class="receipt-item">
+        <div class="receipt-item-name">
+          <span class="nm">${it.menu.emoji} ${it.menu.name}</span>
+          <span class="total">${fmtFt(it.menu.price * it.qty)}</span>
+        </div>
+        <div class="receipt-item-detail">
+          <span>${it.qty} × ${fmtFt(it.menu.price)}</span>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  const tipPct = r.tipPct || 0;
+  const tipAmt = r.tipAmt || 0;
+  const grandTotal = r.grandTotal != null ? r.grandTotal : r.subtotal;
+
+  return `
+    <div class="modal-overlay" onclick="closeReceipt(event)">
+      <div class="modal receipt-modal" onclick="event.stopPropagation()">
+        <div class="modal-head">
+          <h2>Nyugta — ${r.billIdx+1}. számla</h2>
+          <button class="modal-close" onclick="closeReceipt()" aria-label="Bezárás">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="receipt" id="receipt-content">
+          <div class="receipt-header">
+            <div class="receipt-logo">Split<em>Easy</em></div>
+            <div class="receipt-tagline">Demo Restaurant · Budapest</div>
+            <div class="receipt-place">1052 Budapest, Váci utca 24.<br>Adószám: 12345678-2-41</div>
+          </div>
+          <div class="receipt-meta">
+            <span class="lbl">Asztal:</span><span class="val">${r.tableId}.</span>
+            <span class="lbl">Vendégek:</span><span class="val">${r.guests} fő</span>
+            <span class="lbl">Dátum:</span><span class="val">${r.date}</span>
+            <span class="lbl">Idő:</span><span class="val">${r.time}</span>
+            <span class="lbl">Pincér:</span><span class="val">Anna</span>
+            <span class="lbl">Számla:</span><span class="val">${r.billIdx+1} / ${state.receiptsByBill.length || state.bills.length}</span>
+          </div>
+          <div class="receipt-items">${itemsHTML}</div>
+          <div class="receipt-totals">
+            <div class="receipt-total-row"><span class="lbl">Nettó:</span><span class="mono">${fmtFt(r.net)}</span></div>
+            <div class="receipt-total-row"><span class="lbl">ÁFA (27%):</span><span class="mono">${fmtFt(r.vat)}</span></div>
+            <div class="receipt-total-row"><span class="lbl">Részösszeg:</span><span class="mono">${fmtFt(r.subtotal)}</span></div>
+            ${tipPct > 0 ? `<div class="receipt-total-row tip-row"><span class="lbl">Borravaló (${tipPct}%):</span><span class="mono">+ ${fmtFt(tipAmt)}</span></div>` : ''}
+            <div class="receipt-total-row grand"><span class="lbl">Fizetendő:</span><span class="mono">${fmtFt(grandTotal)}</span></div>
+          </div>
+          <div class="receipt-payment">
+            <div class="receipt-payment-row">
+              <span class="meth">Fizetési mód:</span><span class="meth">${r.method}</span>
+            </div>
+            <div class="receipt-payment-row">
+              <span>Összeg:</span><span class="amt">${fmtFt(grandTotal)}</span>
+            </div>
+            <div class="receipt-payment-row">
+              <span>Állapot:</span><span style="color:#16a34a;font-weight:700;">✓ Sikeres fizetés</span>
+            </div>
+          </div>
+          <div class="receipt-footer">
+            <div class="receipt-thanks">Köszönjük a látogatást!</div>
+            <div style="font-family:var(--font-sans);font-size:10px;color:#777;">Várjuk vissza máskor is.</div>
+            <div class="receipt-meta-small">
+              Tranzakció: <span class="ref">${r.ref}</span><br>
+              Kibocsátva: <span class="mono">${r.date} ${r.time}</span><br>
+              <span style="font-family:var(--font-sans);font-style:italic;">SplitEasy szoftver — spliteasy.hu</span>
+            </div>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="closeReceipt()">Bezárás</button>
+          <button class="btn btn-primary" onclick="downloadReceiptPDF(${m.billIdx})">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            PDF letöltés
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function closeReceipt(e) {
+  if (e && e.target !== e.currentTarget && !e.target.closest('.modal-close')) return;
+  state.modal = null;
+  render();
+}
+
+async function downloadReceiptPDF(billIdx) {
+  const receipt = document.getElementById('receipt-content');
+  if (!receipt) { toast('Hiba: nem található a nyugta', { type:'error' }); return; }
+  const r = state.receiptsByBill[billIdx];
+  if (!r) { toast('Hiba: hiányzó nyugta adat', { type:'error' }); return; }
+
+  toast('PDF generálása…', { duration: 1500 });
+
+  try {
+    // Use html2canvas to capture the receipt with Hungarian chars intact
+    const canvas = await html2canvas(receipt, {
+      backgroundColor: '#ffffff',
+      scale: 2,
+      logging: false,
+      useCORS: true,
+    });
+
+    const imgData = canvas.toDataURL('image/png');
+
+    // Use jsPDF
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4',
+    });
+    // Width: standard receipt 80mm, center on A4
+    const pdfW = 210;
+    const pdfH = 297;
+    const margin = 15;
+    const imgW = pdfW - 2 * margin;
+    const aspectRatio = canvas.height / canvas.width;
+    const imgH = imgW * aspectRatio;
+
+    if (imgH <= pdfH - 2 * margin) {
+      pdf.addImage(imgData, 'PNG', margin, margin, imgW, imgH);
+    } else {
+      // Scale down to fit
+      const fitH = pdfH - 2 * margin;
+      const fitW = fitH / aspectRatio;
+      pdf.addImage(imgData, 'PNG', (pdfW - fitW) / 2, margin, fitW, fitH);
+    }
+
+    const filename = `SplitEasy_nyugta_T${r.tableId}_B${r.billIdx+1}_${r.ref}.pdf`;
+    pdf.save(filename);
+    toast('Nyugta letöltve ✓', { type:'success' });
+  } catch (err) {
+    console.error(err);
+    toast('PDF letöltés sikertelen — próbáld újra', { type:'error' });
+  }
+}
+
+/* =====================================================
+   CLOSE TABLE
+   ===================================================== */
+function closeTable() {
+  const tid = state.currentTableId;
+  const t = state.tables[tid];
+  const subtotalAll = tableTotal(tid);
+  // Befizetett teljes összeg (borravalókkal együtt) = a billsPaid amount-jainak összege
+  const total = state.billsPaid.reduce((s, p) => s + (p ? p.amount : 0), 0);
+  const tipTotal = state.billsPaid.reduce((s, p) => s + (p && p.tipAmt ? p.tipAmt : 0), 0);
+  const openedAt = t.openedAt || Date.now();
+  // Csoport-tagok (master + slave-ek), mielőtt feloldjuk
+  const groupMembers = isMaster(tid) ? t.mergedWith.slice() : [tid];
+  const labelAtClose = groupLabel(tid);
+
+  // Build summary BEFORE freeing the table (otherwise tableTotal returns 0)
+  const summary = {
+    tableId: tid,
+    tableLabel: labelAtClose,
+    groupMembers,
+    guests: t.guests,
+    bills: state.bills.length,
+    subtotal: subtotalAll,
+    tipTotal,
+    total,
+    openedAt,
+    paidAt: Date.now(),
+    receipts: state.receiptsByBill.slice(),
+    entries: state.billsPaid.map((p, i) => ({
+      billIdx: i,
+      method: p.method,
+      methodId: p.methodId,
+      amount: p.amount,
+      tipAmt: p.tipAmt || 0,
+      tipPct: p.tipPct || 0,
+      time: p.time,
+      ref: p.ref,
+      units: state.bills[i].length,
+    })),
+  };
+  state.closedSummary = summary;
+
+  // Free up the table AND all group members
+  for (const id of groupMembers) {
+    state.tables[id] = {
+      status: 'free', guests: 0, orderUnits: [], openedAt: null,
+      mergedInto: null, mergedWith: null,
+    };
+  }
+  state.bills = [];
+  state.billsPaid = [];
+  state.paySelection = {};
+  state.payTips = {};
+
+  goTo('closed');
+}
+
+/* =====================================================
+   SCREEN: CLOSED
+   ===================================================== */
+function renderClosed() {
+  const s = state.closedSummary;
+  if (!s) return renderTables();
+
+  const openedMins = Math.max(1, Math.floor((s.paidAt - s.openedAt) / 60000));
+  const methods = [...new Set(s.entries.map(e => e.method))];
+
+  const colorMap = {
+    0: 'var(--teal-500)', 1: 'var(--plum-500)',
+    2: 'var(--amber-500)', 3: 'var(--rose-500)',
+  };
+
+  const logRows = s.entries.map(e => `
+    <div class="log-row">
+      <span class="time">${e.time}</span>
+      <span class="desc">
+        <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${colorMap[e.billIdx%4]};margin-right:6px;vertical-align:middle;"></span>
+        ${e.billIdx+1}. Számla<small>${e.method} · ${e.units} tétel${e.tipAmt > 0 ? ` · 💚 borravaló ${e.tipPct}% (${fmtFt(e.tipAmt)})` : ''} · ref: ${e.ref}</small>
+      </span>
+      <span class="amt">${fmtFt(e.amount)}</span>
+    </div>
+  `).join('');
+
+  const receiptBtns = s.entries.map((e, i) => `
+    <button class="show-receipt-btn" onclick="reopenClosedReceipt(${i})">
+      📄 ${i+1}. nyugta megtekintése
+    </button>
+  `).join('');
+
+  return `
+    <div class="screen">
+      <div class="success-hero">
+        <div class="success-circle">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"/>
+          </svg>
+        </div>
+        <h1>${s.tableLabel || (s.tableId + '. asztal')} — <em>lezárva</em></h1>
+        <p>${(s.groupMembers && s.groupMembers.length > 1)
+          ? `🔗 Összevont csoport feloldva — mind a ${s.groupMembers.length} asztal újra szabad.`
+          : 'Az asztal automatikusan „Szabad"-ra váltott. Új vendéget máris fogadhatsz.'}</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card"><div class="val">${fmtFt(s.total)}</div><div class="lbl">Befizetett</div></div>
+        <div class="stat-card"><div class="val">${fmtFt(s.tipTotal || 0)}</div><div class="lbl">Borravaló</div></div>
+        <div class="stat-card"><div class="val">${s.bills} db</div><div class="lbl">Számla</div></div>
+        <div class="stat-card"><div class="val">${openedMins} p</div><div class="lbl">Asztal-idő</div></div>
+      </div>
+
+      <div class="log-card">
+        <h3>Tranzakciós napló</h3>
+        ${logRows}
+      </div>
+
+      <div class="log-card">
+        <h3>Nyugták újranyitása</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${receiptBtns}</div>
+      </div>
+    </div>
+  `;
+}
+
+function reopenClosedReceipt(idx) {
+  // Use the receipts data captured at close time, no state mutation
+  state.receiptsByBill = state.closedSummary.receipts.slice();
+  state.currentTableId = state.closedSummary.tableId;
+  state.modal = { type: 'receipt', billIdx: idx, fromClosed: true };
+  render();
+}
+
+/* =====================================================
+   BOTTOM BAR (context-aware)
+   ===================================================== */
+function renderBottomBar(bar) {
+  // Show / hide + content based on screen
+  if (state.screen === 'tables' || state.screen === 'closed') {
+    if (state.screen === 'closed') {
+      bar.classList.remove('hidden');
+      bar.innerHTML = `
+        <div class="bottom-info">Készen állsz új vendég fogadására</div>
+        <button class="btn btn-primary" onclick="goTo('tables')">Asztalokhoz →</button>
+      `;
+    } else if (state.mergeMode) {
+      // Merge mode action bar
+      const n = state.mergeSelected.size;
+      const sortedIds = Array.from(state.mergeSelected).sort((a, b) => a - b);
+      const label = sortedIds.join('–');
+      bar.classList.remove('hidden');
+      bar.innerHTML = `
+        <div class="bottom-info">
+          ${n === 0 ? 'Válassz legalább 2 szabad asztalt' :
+            n === 1 ? '<strong>1 asztal</strong> · legalább még 1 kell' :
+            `<strong>${n} asztal</strong> · ${label}`}
+        </div>
+        <button class="btn btn-primary" ${n<2?'disabled':''} onclick="confirmMerge()">
+          Összevon ✓
+        </button>
+      `;
+    } else {
+      bar.classList.add('hidden');
+      bar.innerHTML = '';
+    }
+    return;
+  }
+
+  if (state.screen === 'order') {
+    const cnt = orderCartCount();
+    const tot = orderCartTotal();
+    bar.classList.remove('hidden');
+    bar.innerHTML = `
+      <div class="bottom-info">
+        <span class="lbl">Kosár</span><br>
+        <strong>${cnt} tétel</strong> · <span class="price">${fmtFt(tot)}</span>
+      </div>
+      <button class="btn btn-primary" ${cnt===0?'disabled':''} onclick="saveOrder()">
+        Rendelés →
+      </button>
+    `;
+    return;
+  }
+
+  if (state.screen === 'split') {
+    const tid = state.currentTableId;
+    const t = state.tables[tid];
+    const assignedSet = new Set();
+    state.bills.forEach(b => b.forEach(uid => assignedSet.add(uid)));
+    const unassignedCount = t.orderUnits.length - assignedSet.size;
+    const canProceed = unassignedCount === 0 && state.bills.every(b => b.length > 0);
+
+    bar.classList.remove('hidden');
+    bar.innerHTML = `
+      <div class="bottom-info">
+        ${canProceed
+          ? `✅ <strong>${state.bills.length} számla</strong> kész`
+          : `<strong>${unassignedCount}</strong> tétel szétosztatlan${state.bills.some(b=>b.length===0)?' · üres számla':''}`}
+      </div>
+      <button class="btn btn-primary" ${canProceed?'':'disabled'} onclick="goTo('payment')">
+        Fizetéshez →
+      </button>
+    `;
+    return;
+  }
+
+  if (state.screen === 'payment') {
+    const totalBills = state.bills.length;
+    const paidCount = state.billsPaid.filter(p => p).length;
+    const allPaid = totalBills > 0 && paidCount === totalBills;
+    const paidSum = state.billsPaid.reduce((s, p) => s + (p ? p.amount : 0), 0);
+
+    bar.classList.remove('hidden');
+    bar.innerHTML = `
+      <div class="bottom-info">
+        ${allPaid
+          ? `✅ Minden számla fizetve — <strong>${fmtFt(paidSum)}</strong>`
+          : `<strong>${paidCount}/${totalBills}</strong> számla fizetve`}
+      </div>
+      <button class="btn btn-primary" ${allPaid?'':'disabled'} onclick="closeTable()">
+        Asztal lezárása ✓
+      </button>
+    `;
+    return;
+  }
+}
+
+/* =====================================================
+   ORDER CART SHEET (popup with full list)
+   ===================================================== */
+function renderCartSheetIfNeeded() {
+  if (state.screen !== 'order' || !state.cartSheetOpen || state.orderCart.length === 0) return;
+
+  const root = $('#modal-root');
+  const rowsHTML = state.orderCart.map(r => {
+    const m = menuOf(r.menuId);
+    return `
+      <div class="cart-row">
+        <div class="em">${m.emoji}</div>
+        <div class="nm">${m.name}<span class="pr">${fmtFt(m.price)}</span></div>
+        <div class="qty-stepper">
+          <button class="qty-stepper-btn" onclick="changeCartQty('${m.id}', -1)">−</button>
+          <span class="qty-val">${r.qty}</span>
+          <button class="qty-stepper-btn" onclick="changeCartQty('${m.id}', 1)">+</button>
+        </div>
+        <span class="subtotal">${fmtFt(m.price * r.qty)}</span>
+      </div>
+    `;
+  }).join('');
+
+  root.innerHTML = `
+    <div class="cart-sheet-overlay" onclick="closeCartSheet()"></div>
+    <div class="cart-sheet">
+      <div class="sheet-handle"></div>
+      <div class="sheet-head">
+        <h3>Kosár · ${orderCartCount()} tétel</h3>
+        <button class="sheet-close" onclick="closeCartSheet()" aria-label="Bezárás">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="sheet-list">${rowsHTML}</div>
+      <div class="sheet-total">
+        <span class="lbl">Végösszeg</span>
+        <span class="val">${fmtFt(orderCartTotal())}</span>
+      </div>
+    </div>
+  `;
+}
+function closeCartSheet() {
+  state.cartSheetOpen = false;
+  render();
+}
+
+/* =====================================================
+   RESET
+   ===================================================== */
+function askReset() {
+  state.modal = { type: 'reset-confirm' };
+  render();
+}
+
+function renderResetConfirm() {
+  return `
+    <div class="modal-overlay" onclick="cancelResetConfirm(event)">
+      <div class="modal" style="max-width:380px;" onclick="event.stopPropagation()">
+        <div class="modal-head">
+          <h2>Újraindítás?</h2>
+          <button class="modal-close" onclick="cancelResetConfirm()" aria-label="Bezárás">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
+        <div class="modal-body">
+          <p>Az összes asztal, rendelés és nyugta visszaáll a demó kiindulási állapotába.</p>
+        </div>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" onclick="cancelResetConfirm()">Mégse</button>
+          <button class="btn btn-primary" onclick="doReset()">Igen, újraindítom</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+function cancelResetConfirm(e) {
+  if (e && e.target !== e.currentTarget && !e.target.closest('.modal-close')) return;
+  state.modal = null;
+  render();
+}
+function doReset() {
+  state = createInitialState();
+  state.modal = null;
+  render();
+  toast('Demó visszaállítva ✓', { type:'success' });
+}
+
+/* =====================================================
+   GLOBAL EVENT BINDINGS
+   ===================================================== */
+$('#resetBtn').addEventListener('click', askReset);
+$('#brandLogo').addEventListener('click', () => goTo('tables'));
+
+/* =====================================================
+   INIT
+   ===================================================== */
+function init() {
+  if (!welcomeShown) state.modal = { type: 'welcome' };
+  render();
+}
+init();
+</script>
+</body>
+</html>
